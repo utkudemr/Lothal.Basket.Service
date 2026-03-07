@@ -1,0 +1,16 @@
+﻿  Determining projects to restore...
+  All projects are up-to-date for restore.
+  Lothal.Basket.Service.Domain -> C:\Users\utkudemir\.gemini\antigravity\scratch\Lothal.Basket.Service\src\Domain\bin\Debug\net8.0\Lothal.Basket.Service.Domain.dll
+  Lothal.Basket.Service.Application -> C:\Users\utkudemir\.gemini\antigravity\scratch\Lothal.Basket.Service\src\Application\bin\Debug\net8.0\Lothal.Basket.Service.Application.dll
+  Lothal.Basket.Service.Infrastructure -> C:\Users\utkudemir\.gemini\antigravity\scratch\Lothal.Basket.Service\src\Infrastructure\bin\Debug\net8.0\Lothal.Basket.Service.Infrastructure.dll
+C:\Users\utkudemir\.gemini\antigravity\scratch\Lothal.Basket.Service\src\Api\Program.cs(16,19): error CS1061: 'WebApplicationBuilder' does not contain a definition for 'ApplicationBuilder' and no accessible extension method 'ApplicationBuilder' accepting a first argument of type 'WebApplicationBuilder' could be found (are you missing a using directive or an assembly reference?) [C:\Users\utkudemir\.gemini\antigravity\scratch\Lothal.Basket.Service\src\Api\Lothal.Basket.Service.Api.csproj]
+
+Build FAILED.
+
+C:\Users\utkudemir\.gemini\antigravity\scratch\Lothal.Basket.Service\src\Api\Program.cs(16,19): error CS1061: 'WebApplicationBuilder' does not contain a definition for 'ApplicationBuilder' and no accessible extension method 'ApplicationBuilder' accepting a first argument of type 'WebApplicationBuilder' could be found (are you missing a using directive or an assembly reference?) [C:\Users\utkudemir\.gemini\antigravity\scratch\Lothal.Basket.Service\src\Api\Lothal.Basket.Service.Api.csproj]
+    0 Warning(s)
+    1 Error(s)
+
+Time Elapsed 00:00:01.44
+
+Workload updates are available. Run `dotnet workload list` for more information.
