@@ -17,13 +17,8 @@ builder.Services.AddInfrastructureServices(builder.Configuration);
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-
-app.UseHttpsRedirection();
+app.UseSwagger();
+app.UseSwaggerUI();
 
 // Apply DB migrations on startup
 using (var scope = app.Services.CreateScope())
@@ -32,7 +27,6 @@ using (var scope = app.Services.CreateScope())
     context.Database.EnsureCreated();
 }
 
-// Map Minimal API Endpoints
 app.MapPost("/api/baskets", async (CreateBasketCommand command, IMediator mediator) =>
 {
     var basketId = await mediator.Send(command);
