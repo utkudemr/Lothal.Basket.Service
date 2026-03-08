@@ -6,7 +6,6 @@ services:
       dockerfile: Dockerfile.ApiGateway
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ReverseProxy__Clusters__basket-cluster__Destinations__destination1__Address=http://lothal.basket.service:8080
     ports:
       - "5024:8080"
     depends_on:
@@ -17,11 +16,11 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    deploy:
+      replicas: 2
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__DefaultConnection=Host=basket-db;Database=BasketDb;Username=postgres;Password=postgres
-    ports:
-      - "5000:8080"
     depends_on:
       - basket-db
 
