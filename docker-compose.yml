@@ -1,4 +1,17 @@
 services:
+  lothal.api.gateway:
+    image: ${DOCKER_REGISTRY-}lothalapigateway
+    build:
+      context: .
+      dockerfile: Dockerfile.ApiGateway
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ReverseProxy__Clusters__basket-cluster__Destinations__destination1__Address=http://lothal.basket.service:8080
+    ports:
+      - "5024:8080"
+    depends_on:
+      - lothal.basket.service
+
   lothal.basket.service:
     image: ${DOCKER_REGISTRY-}lothalbasketservice
     build:
