@@ -69,6 +69,15 @@ When you execute multiple `GET` or `POST` requests rapidly, inspect the response
 
 YARP smoothly distributes your requests across the available replicas, proving that the load balancing is actively working!
 
+## 🛡️ Rate Limiting (YARP)
+
+To protect backend services from being overwhelmed, the YARP API Gateway implements ASP.NET Core Native Rate Limiting using the **Fixed Window** algorithm. Depending on the endpoint, different policies apply:
+
+*   **`create-basket-policy`**: Applied only to `POST /basket-api/api/baskets`. Highly restrictive (**5 requests / 10s**) to prevent spamming the database with write operations.
+*   **`get-basket-policy`**: Applied to all other endpoints (like `GET /basket-api/api/baskets/{id}`). More relaxed (**20 requests / 10s**) as these are lightweight read operations.
+
+If a limit is exceeded, the API Gateway immediately returns a **429 Too Many Requests** HTTP status code without forwarding the request.
+
 ## 🛠 Stopping the Project
 
 To stop and clean up all containers and networks:
@@ -79,7 +88,7 @@ docker compose down
 
 ## 📝 Technologies Used
 *   **C# 12 / .NET 8**
-*   **YARP** (Reverse Proxy)
+*   **YARP** (Reverse Proxy & Rate Limiter)
 *   **MediatR** (CQRS)
 *   **Entity Framework Core**
 *   **PostgreSQL**
