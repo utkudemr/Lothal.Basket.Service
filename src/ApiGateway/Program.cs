@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 using Yarp.ReverseProxy.Forwarder;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -9,9 +11,32 @@ builder.Services.AddReverseProxy()
 // Register the custom HTTP client factory
 builder.Services.AddSingleton<IForwarderHttpClientFactory, CustomForwarderHttpClientFactory>();
 
+builder.Services.AddRateLimiter(options =>
+{
+    // Policy for GET /api/baskets/{id} (Allow more requests)
+    options.AddFixedWindowLimiter("get-basket-policy", opt =>
+    {
+        opt.PermitLimit = 20;
+        opt.Window = TimeSpan.FromSeconds(10);
+        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        opt.QueueLimit = 0;
+    });
+
+    // Policy for POST /api/baskets (Allow fewer requests)
+    options.AddFixedWindowLimiter("create-basket-policy", opt =>
+    {
+        opt.PermitLimit = 5;
+        opt.Window = TimeSpan.FromSeconds(10);
+        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        opt.QueueLimit = 0;
+    });
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
+app.UseRateLimiter();
 app.MapReverseProxy();
 
 app.Run();
