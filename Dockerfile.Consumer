@@ -1,0 +1,27 @@
+FROM mcr.microsoft.com/dotnet/runtime:8.0 AS base
+USER app
+WORKDIR /app
+
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+ARG BUILD_CONFIGURATION=Release
+WORKDIR /src
+
+# Copy csproj file
+COPY ["src/Consumer/Lothal.Basket.Consumer/Lothal.Basket.Consumer.csproj", "src/Consumer/Lothal.Basket.Consumer/"]
+
+# Restore dependencies
+RUN dotnet restore "./src/Consumer/Lothal.Basket.Consumer/Lothal.Basket.Consumer.csproj"
+
+# Copy the rest of the source code
+COPY . .
+WORKDIR "/src/src/Consumer/Lothal.Basket.Consumer"
+RUN dotnet build "./Lothal.Basket.Consumer.csproj" -c $BUILD_CONFIGURATION -o /app/build
+
+FROM build AS publish
+ARG BUILD_CONFIGURATION=Release
+RUN dotnet publish "./Lothal.Basket.Consumer.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+
+FROM base AS final
+WORKDIR /app
+COPY --from=publish /app/publish .
+ENTRYPOINT ["dotnet", "Lothal.Basket.Consumer.dll"]

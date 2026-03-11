@@ -9,10 +9,10 @@ services:
     ports:
       - "5024:8080"
     depends_on:
-      - lothal.basket.service
+      - basket-api
 
-  lothal.basket.service:
-    image: ${DOCKER_REGISTRY-}lothalbasketservice
+  basket-api:
+    image: ${DOCKER_REGISTRY-}lothalbasketapi
     build:
       context: .
       dockerfile: Dockerfile
@@ -20,9 +20,27 @@ services:
       replicas: 2
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
       - ConnectionStrings__DefaultConnection=Host=basket-db;Database=BasketDb;Username=postgres;Password=postgres
+      - Nats__Url=nats:4222
     depends_on:
       - basket-db
+      - nats
+
+  lothal.basket.consumer:
+    image: ${DOCKER_REGISTRY-}lothalbasketconsumer
+    build:
+      context: .
+      dockerfile: Dockerfile.Consumer
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - Nats__Url=nats:4222
+      - Couchbase__ConnectionString=couchbase://couchbase
+      - Couchbase__Username=Administrator
+      - Couchbase__Password=password
+    depends_on:
+      - nats
+      - couchbase
 
   basket-db:
     image: postgres:15-alpine
@@ -35,5 +53,23 @@ services:
     volumes:
       - basket_db_data:/var/lib/postgresql/data
 
+  nats:
+    image: nats:latest
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+
+  couchbase:
+    image: couchbase:community-7.6.2
+    environment:
+      - CB_USERNAME=Administrator
+      - CB_PASSWORD=password
+    ports:
+      - "8091-8096:8091-8096"
+      - "11210-11211:11210-11211"
+    volumes:
+      - couchbase_data:/opt/couchbase/var
+
 volumes:
   basket_db_data:
+  couchbase_data:

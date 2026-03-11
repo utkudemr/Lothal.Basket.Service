@@ -8,21 +8,21 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
 # Copy csproj file
-COPY ["src/ApiGateway/Lothal.ApiGateway.csproj", "src/ApiGateway/"]
+COPY ["src/Gateway/Lothal.Basket.ApiGateway/Lothal.Basket.ApiGateway.csproj", "src/Gateway/Lothal.Basket.ApiGateway/"]
 
 # Restore dependencies
-RUN dotnet restore "./src/ApiGateway/Lothal.ApiGateway.csproj"
+RUN dotnet restore "./src/Gateway/Lothal.Basket.ApiGateway/Lothal.Basket.ApiGateway.csproj"
 
 # Copy the rest of the source code
 COPY . .
-WORKDIR "/src/src/ApiGateway"
-RUN dotnet build "./Lothal.ApiGateway.csproj" -c $BUILD_CONFIGURATION -o /app/build
+WORKDIR "/src/src/Gateway/Lothal.Basket.ApiGateway"
+RUN dotnet build "./Lothal.Basket.ApiGateway.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./Lothal.ApiGateway.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "./Lothal.Basket.ApiGateway.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "Lothal.ApiGateway.dll"]
+ENTRYPOINT ["dotnet", "Lothal.Basket.ApiGateway.dll"]
