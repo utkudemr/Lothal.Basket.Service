@@ -5,7 +5,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="MediatR" Version="14.1.0" />
+    <PackageReference Include="Lothal.Mediator" Version="1.0.0" />
   </ItemGroup>
 
   <PropertyGroup>

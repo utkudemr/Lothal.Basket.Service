@@ -1,4 +1,4 @@
-using MediatR;
+using Lothal.Mediator.Core.Dispatchers;
 using Lothal.Basket.Domain.Entities;
 using Lothal.Basket.Domain.Repositories;
 

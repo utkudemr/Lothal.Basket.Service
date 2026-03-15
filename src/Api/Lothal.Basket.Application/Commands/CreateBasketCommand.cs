@@ -1,4 +1,4 @@
-using MediatR;
+using Lothal.Mediator.Core.Dispatchers;
 
 namespace Lothal.Basket.Application.Commands;
 
