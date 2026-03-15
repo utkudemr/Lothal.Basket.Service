@@ -1,5 +1,6 @@
 using Lothal.Basket.Application;
 using Lothal.Basket.Application.Commands;
+using Microsoft.AspNetCore.Mvc;
 using Lothal.Basket.Application.Queries;
 using Lothal.Basket.Infrastructure;
 using Lothal.Basket.Infrastructure.Data;
@@ -41,7 +42,7 @@ using (var scope = app.Services.CreateScope())
     context.Database.EnsureCreated();
 }
 
-app.MapPost("/api/baskets", async (CreateBasketCommand command, Mediator mediator) =>
+app.MapPost("/api/baskets", async (CreateBasketCommand command, [FromServices] Mediator mediator) =>
 {
     var basketId = await mediator.Send(command);
     return Results.Created($"/api/baskets/{basketId}", new { Id = basketId, ServedBy = Environment.MachineName });
@@ -49,7 +50,7 @@ app.MapPost("/api/baskets", async (CreateBasketCommand command, Mediator mediato
 .WithName("CreateBasket")
 .WithOpenApi();
 
-app.MapGet("/api/baskets/{id}", async (Guid id, Mediator mediator) =>
+app.MapGet("/api/baskets/{id}", async (Guid id, [FromServices] Mediator mediator) =>
 {
     var basket = await mediator.Send(new GetBasketByIdQuery(id));
     if (basket == null) return Results.NotFound();
