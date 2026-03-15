@@ -1,4 +1,4 @@
-using Couchbase;
+using Couchbase.Extensions.DependencyInjection;
 using Couchbase.KeyValue;
 using Lothal.Basket.Consumer.Models;
 using NATS.Client.Core;
@@ -10,19 +10,35 @@ public class Worker : BackgroundService
 {
     private readonly ILogger<Worker> _logger;
     private readonly INatsConnection _natsConnection;
-    private readonly ICluster _couchbaseCluster;
+    private readonly IBucketProvider _bucketProvider;
 
-    public Worker(ILogger<Worker> logger, INatsConnection natsConnection, ICluster couchbaseCluster)
+    public Worker(ILogger<Worker> logger, INatsConnection natsConnection, IBucketProvider bucketProvider)
     {
         _logger = logger;
         _natsConnection = natsConnection;
-        _couchbaseCluster = couchbaseCluster;
+        _bucketProvider = bucketProvider;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var bucket = await _couchbaseCluster.BucketAsync("basket");
-        var collection = bucket.DefaultCollection();
+        // Couchbase'in tamamen bootstrap olmasını bekle (retry logic)
+        ICouchbaseCollection? collection = null;
+        while (!stoppingToken.IsCancellationRequested && collection == null)
+        {
+            try
+            {
+                var bucket = await _bucketProvider.GetBucketAsync("basket");
+                collection = bucket.DefaultCollection();
+                _logger.LogInformation("Connected to Couchbase bucket 'basket'.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Couchbase not ready yet, retrying in 5 seconds...");
+                await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+            }
+        }
+
+        if (collection == null) return;
 
         _logger.LogInformation("Worker starting to listen on NATS subject 'baskets.events'");
 

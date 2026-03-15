@@ -6,10 +6,12 @@ services:
       dockerfile: Dockerfile.ApiGateway
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
+      - Serilog__WriteTo__1__Args__requestUri=http://victorialogs:9428/insert/jsonline?_stream_fields=service,environment&_msg_field=@m&_time_field=@t
     ports:
       - "5024:8080"
     depends_on:
       - basket-api
+      - victorialogs
 
   basket-api:
     image: ${DOCKER_REGISTRY-}lothalbasketapi
@@ -23,9 +25,11 @@ services:
       - ASPNETCORE_URLS=http://+:8080
       - ConnectionStrings__DefaultConnection=Host=basket-db;Database=BasketDb;Username=postgres;Password=postgres
       - Nats__Url=nats:4222
+      - Serilog__WriteTo__1__Args__requestUri=http://victorialogs:9428/insert/jsonline?_stream_fields=service,environment&_msg_field=@m&_time_field=@t
     depends_on:
       - basket-db
       - nats
+      - victorialogs
 
   lothal.basket.consumer:
     image: ${DOCKER_REGISTRY-}lothalbasketconsumer
@@ -38,9 +42,11 @@ services:
       - Couchbase__ConnectionString=couchbase://couchbase
       - Couchbase__Username=Administrator
       - Couchbase__Password=password
+      - Serilog__WriteTo__1__Args__requestUri=http://victorialogs:9428/insert/jsonline?_stream_fields=service,environment&_msg_field=@m&_time_field=@t
     depends_on:
       - nats
       - couchbase
+      - victorialogs
 
   basket-db:
     image: postgres:15-alpine
@@ -70,6 +76,30 @@ services:
     volumes:
       - couchbase_data:/opt/couchbase/var
 
+  victorialogs:
+    image: victoriametrics/victoria-logs:latest
+    command:
+      - -storageDataPath=/victoria-logs-data
+      - -httpListenAddr=:9428
+    ports:
+      - "9428:9428"
+    volumes:
+      - victoria_logs_data:/victoria-logs-data
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_USER=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - victorialogs
+
 volumes:
   basket_db_data:
   couchbase_data:
+  victoria_logs_data:
+  grafana_data:

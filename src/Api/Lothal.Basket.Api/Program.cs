@@ -6,8 +6,12 @@ using Lothal.Basket.Infrastructure.Data;
 using MediatR;
 using NATS.Client.Core;
 using NATS.Net;
+using Lothal.Basket.Api;
+using Lothal.BuildingBlocks.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.AddCustomLogging("basket-api");
 
 // Add services to the container.
 builder.Services.AddEndpointsApiExplorer();
