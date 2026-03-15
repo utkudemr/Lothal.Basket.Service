@@ -1,13 +1,14 @@
 # Lothal Basket Microservice Ecosystem
 
-This project demonstrates a comprehensive, fully functional **.NET 8** microservice architecture. It showcases advanced distributed system patterns including **Clean Architecture**, **CQRS (MediatR)**, **Outbox/Inbox Patterns**, **Event-Driven Architecture (NATS)**, and an **API Gateway (YARP)** with built-in dynamic load balancing and rate limiting.
+This project demonstrates a comprehensive, fully functional **.NET 8** microservice architecture. It showcases advanced distributed system patterns including **Clean Architecture**, **CQRS (Lothal.Mediator)**, **Outbox/Inbox Patterns**, **Event-Driven Architecture (NATS)**, and an **API Gateway (YARP)** with built-in dynamic load balancing and rate limiting.
 
 Everything is containerized and orchestrated via **Docker Compose**, providing a seamless local development and deployment experience.
 
 ## 🚀 Features
 
 *   **Basket Service (Producer API)**: A .NET 8 Minimal API handling basket write operations (Create, Get) using **PostgreSQL** (Entity Framework Core).
-*   **Clean Architecture & CQRS**: Business logic is completely decoupled using layers (`Api`, `Application`, `Domain`, `Infrastructure`) and the `MediatR` package.
+*   **Clean Architecture & CQRS**: Business logic is completely decoupled using layers (`Api`, `Application`, `Domain`, `Infrastructure`) and the custom `Lothal.Mediator` package.
+*   **Centralized Logging**: Seamlessly configured throughout all microservices using the shared `Lothal.BuildingBlocks` library, directing logs to **VictoriaLogs** via HTTP.
 *   **Outbox Pattern**: The Basket API reliably saves domain events to an Outbox table in PostgreSQL within the same transaction as the business entity changes. A background worker then publishes these events to NATS, guaranteeing at-least-once delivery.
 *   **NATS Messaging**: A lightweight, high-performance messaging system used as the event bus to decouple the producer and consumer.
 *   **Basket Consumer (Worker Service)**: A separate .NET 8 worker service that listens to events from NATS.
@@ -31,13 +32,14 @@ Lothal.Basket.Service/
 │   │   ├── Lothal.Basket.Domain/          # Entities (Basket, BasketItem, OutboxMessage)
 │   │   └── Lothal.Basket.Infrastructure/  # EF Core AppDbContext, Repositories
 │   ├── ApiGateway/             # YARP API Gateway Project
+│   ├── BuildingBlocks/         # Shared Libraries (Centralized Logging Configs)
 │   └── Consumer/               # Consumer Microservice
 │       └── Lothal.Basket.Consumer/        # NATS Listener & Couchbase Inbox Integration
 ```
 
 ## 🐳 Running the Project (Docker Compose)
 
-The easiest way to run the entire architecture (Gateway + Multiple Basket Replicas + Consumer + NATS + PostgreSQL + Couchbase) is via Docker Compose.
+The easiest way to run the entire architecture (Gateway + Multiple Basket Replicas + Consumer + NATS + PostgreSQL + Couchbase + VictoriaLogs + Grafana) is via Docker Compose.
 
 1.  Open your terminal in the root directory (where `docker-compose.yml` is located).
 2.  Build and start the containers in detached mode:
@@ -99,9 +101,10 @@ docker compose down -v
 
 ## 📝 Technologies Used
 *   **C# 12 / .NET 8**
-*   **MediatR** (CQRS Pattern)
+*   **Lothal.Mediator** (Custom CQRS Dispatcher)
 *   **NATS** (Event Bus / Messaging)
 *   **Entity Framework Core & PostgreSQL** (Write Database & Outbox)
 *   **Couchbase** (Read Database / Inbox)
 *   **YARP** (Reverse Proxy & Rate Limiter)
+*   **Serilog & VictoriaLogs** (Centralized Logging)
 *   **Docker / Docker Compose**
