@@ -7,6 +7,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - Serilog__WriteTo__1__Args__requestUri=http://victorialogs:9428/insert/jsonline?_stream_fields=service,environment&_msg_field=@m&_time_field=@t
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
     ports:
       - "5024:8080"
     depends_on:
@@ -26,6 +27,7 @@ services:
       - ConnectionStrings__DefaultConnection=Host=basket-db;Database=BasketDb;Username=postgres;Password=postgres
       - Nats__Url=nats:4222
       - Serilog__WriteTo__1__Args__requestUri=http://victorialogs:9428/insert/jsonline?_stream_fields=service,environment&_msg_field=@m&_time_field=@t
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
     depends_on:
       - basket-db
       - nats
@@ -43,6 +45,7 @@ services:
       - Couchbase__Username=Administrator
       - Couchbase__Password=password
       - Serilog__WriteTo__1__Args__requestUri=http://victorialogs:9428/insert/jsonline?_stream_fields=service,environment&_msg_field=@m&_time_field=@t
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
     depends_on:
       - nats
       - couchbase
@@ -97,6 +100,12 @@ services:
       - grafana_data:/var/lib/grafana
     depends_on:
       - victorialogs
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "16686:16686"
+      - "4317:4317"
 
 volumes:
   basket_db_data:

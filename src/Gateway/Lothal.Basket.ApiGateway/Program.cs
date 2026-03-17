@@ -2,10 +2,12 @@ using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
 using Yarp.ReverseProxy.Forwarder;
 using Lothal.BuildingBlocks.Logging;
+using Lothal.BuildingBlocks.Telemetry;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddCustomLogging("api-gateway");
+builder.AddCustomTelemetry("api-gateway");
 
 // Add the reverse proxy to capability to the server
 builder.Services.AddReverseProxy()

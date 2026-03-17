@@ -9,10 +9,12 @@ using NATS.Client.Core;
 using NATS.Net;
 using Lothal.Basket.Api;
 using Lothal.BuildingBlocks.Logging;
+using Lothal.BuildingBlocks.Telemetry;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddCustomLogging("basket-api");
+builder.AddCustomTelemetry("basket-api");
 
 // Add services to the container.
 builder.Services.AddEndpointsApiExplorer();

@@ -3,10 +3,12 @@ using Couchbase.Extensions.DependencyInjection;
 using Lothal.Basket.Consumer;
 using NATS.Client.Core;
 using Lothal.BuildingBlocks.Logging;
+using Lothal.BuildingBlocks.Telemetry;
 
 var builder = Host.CreateApplicationBuilder(args);
 
 builder.AddCustomLogging("basket-consumer");
+builder.AddCustomTelemetry("basket-consumer");
 
 // Configure NATS
 var natsUrl = builder.Configuration.GetValue<string>("Nats:Url") ?? "nats://127.0.0.1:4222";
