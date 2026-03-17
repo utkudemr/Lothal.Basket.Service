@@ -1,6 +1,6 @@
 # Lothal Basket Microservice Ecosystem
 
-This project demonstrates a comprehensive, fully functional **.NET 8** microservice architecture. It showcases advanced distributed system patterns including **Clean Architecture**, **CQRS (Lothal.Mediator)**, **Outbox/Inbox Patterns**, **Event-Driven Architecture (NATS)**, and an **API Gateway (YARP)** with built-in dynamic load balancing and rate limiting.
+This project demonstrates a comprehensive, fully functional **.NET 8** microservice architecture. It showcases advanced distributed system patterns including **Clean Architecture**, **CQRS (Lothal.Mediator)**, **Outbox/Inbox Patterns**, **Event-Driven Architecture (NATS)**, an **API Gateway (YARP)** with built-in dynamic load balancing and rate limiting, and **Distributed Tracing** via OpenTelemetry.
 
 Everything is containerized and orchestrated via **Docker Compose**, providing a seamless local development and deployment experience.
 
@@ -8,7 +8,8 @@ Everything is containerized and orchestrated via **Docker Compose**, providing a
 
 *   **Basket Service (Producer API)**: A .NET 8 Minimal API handling basket write operations (Create, Get) using **PostgreSQL** (Entity Framework Core).
 *   **Clean Architecture & CQRS**: Business logic is completely decoupled using layers (`Api`, `Application`, `Domain`, `Infrastructure`) and the custom `Lothal.Mediator` package.
-*   **Centralized Logging**: Seamlessly configured throughout all microservices using the shared `Lothal.BuildingBlocks` library, directing logs to **VictoriaLogs** via HTTP.
+*   **Centralized Logging**: Seamlessly configured throughout all microservices using the shared `Lothal.BuildingBlocks` library, directing logs to **VictoriaLogs** via HTTP (Serilog + NDJSON batch formatter).
+*   **Distributed Tracing (OpenTelemetry)**: End-to-end distributed traces collected from all services (Basket API, Consumer, API Gateway) via the shared `Lothal.BuildingBlocks` library and exported to **Jaeger** using OTLP. Traces include ASP.NET Core, HTTP client, NATS, Couchbase, and Npgsql spans.
 *   **Outbox Pattern**: The Basket API reliably saves domain events to an Outbox table in PostgreSQL within the same transaction as the business entity changes. A background worker then publishes these events to NATS, guaranteeing at-least-once delivery.
 *   **NATS Messaging**: A lightweight, high-performance messaging system used as the event bus to decouple the producer and consumer.
 *   **Basket Consumer (Worker Service)**: A separate .NET 8 worker service that listens to events from NATS.
@@ -21,7 +22,7 @@ Everything is containerized and orchestrated via **Docker Compose**, providing a
 
 ```text
 Lothal.Basket.Service/
-├── docker-compose.yml          # Container orchestration (API, Consumer, Gateway, NATS, DBs)
+├── docker-compose.yml          # Container orchestration (API, Consumer, Gateway, NATS, DBs, Observability)
 ├── Dockerfile                  # Multi-stage Docker build for Basket Service (Producer)
 ├── Dockerfile.ApiGateway       # Multi-stage Docker build for API Gateway (YARP)
 ├── Dockerfile.Consumer         # Multi-stage Docker build for Basket Consumer
@@ -32,14 +33,17 @@ Lothal.Basket.Service/
 │   │   ├── Lothal.Basket.Domain/          # Entities (Basket, BasketItem, OutboxMessage)
 │   │   └── Lothal.Basket.Infrastructure/  # EF Core AppDbContext, Repositories
 │   ├── ApiGateway/             # YARP API Gateway Project
-│   ├── BuildingBlocks/         # Shared Libraries (Centralized Logging Configs)
+│   ├── BuildingBlocks/         # Shared Libraries (Logging & Telemetry Configs)
+│   │   └── Lothal.BuildingBlocks/
+│   │       ├── Logging/        # AddCustomLogging() — Serilog → VictoriaLogs
+│   │       └── Telemetry/      # AddCustomTelemetry() — OpenTelemetry → Jaeger (OTLP)
 │   └── Consumer/               # Consumer Microservice
 │       └── Lothal.Basket.Consumer/        # NATS Listener & Couchbase Inbox Integration
 ```
 
 ## 🐳 Running the Project (Docker Compose)
 
-The easiest way to run the entire architecture (Gateway + Multiple Basket Replicas + Consumer + NATS + PostgreSQL + Couchbase + VictoriaLogs + Grafana) is via Docker Compose.
+The easiest way to run the entire architecture (Gateway + Multiple Basket Replicas + Consumer + NATS + PostgreSQL + Couchbase + VictoriaLogs + Grafana + Jaeger) is via Docker Compose.
 
 1.  Open your terminal in the root directory (where `docker-compose.yml` is located).
 2.  Build and start the containers in detached mode:
@@ -85,6 +89,28 @@ To protect backend services from being overwhelmed, the YARP API Gateway impleme
 
 If a limit is exceeded, the API Gateway immediately returns a **429 Too Many Requests** HTTP status code.
 
+## 🔭 Distributed Tracing (Jaeger)
+
+All services instrument outgoing and incoming requests using **OpenTelemetry** and export traces to **Jaeger** via the `OTEL_EXPORTER_OTLP_ENDPOINT` environment variable (`http://jaeger:4317` inside Docker).
+
+The shared `AddCustomTelemetry(applicationName)` extension from `Lothal.BuildingBlocks` configures:
+- **ASP.NET Core** instrumentation (incoming HTTP requests)
+- **HTTP Client** instrumentation (outgoing HTTP requests)
+- **NATS.Net**, **Couchbase**, **Npgsql**, and **YARP** activity sources
+
+Once the containers are running, open the **Jaeger UI** to explore traces:
+
+*   **URL:** `http://localhost:16686`
+
+## 📊 Centralized Logging (VictoriaLogs + Grafana)
+
+Logs from all services are shipped via HTTP using **Serilog** (NDJSON format) to **VictoriaLogs**.
+
+| Service | URL |
+|---|---|
+| VictoriaLogs (query UI) | `http://localhost:9428` |
+| Grafana | `http://localhost:3000` (admin / admin) |
+
 ## 🛠 Stopping the Project
 
 To stop and clean up all containers and networks:
@@ -107,4 +133,5 @@ docker compose down -v
 *   **Couchbase** (Read Database / Inbox)
 *   **YARP** (Reverse Proxy & Rate Limiter)
 *   **Serilog & VictoriaLogs** (Centralized Logging)
+*   **OpenTelemetry & Jaeger** (Distributed Tracing)
 *   **Docker / Docker Compose**
