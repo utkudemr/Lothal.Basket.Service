@@ -1,4 +1,5 @@
 using Lothal.Basket.Application;
+using Lothal.BuildingBlocks.Messaging;
 using Lothal.Basket.Application.Commands;
 using Microsoft.AspNetCore.Mvc;
 using Lothal.Basket.Application.Queries;
@@ -25,8 +26,7 @@ builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices(builder.Configuration);
 
 // Add NATS Client
-var natsUrl = builder.Configuration.GetValue<string>("Nats:Url") ?? "nats://127.0.0.1:4222";
-builder.Services.AddSingleton<INatsConnection>(sp => new NatsConnection(new NatsOpts { Url = natsUrl }));
+builder.AddCustomNats();
 
 // Add Background Service
 builder.Services.AddHostedService<Lothal.Basket.Api.BackgroundJobs.OutboxPublisherBackgroundService>();
@@ -60,6 +60,16 @@ app.MapGet("/api/baskets/{id}", async (Guid id, [FromServices] Mediator mediator
     return Results.Ok(new { Basket = basket, ServedBy = Environment.MachineName });
 })
 .WithName("GetBasketById")
+.WithOpenApi();
+
+app.MapPost("/api/baskets/checkout", async (CheckoutBasketCommand command, [FromServices] Mediator mediator) =>
+{
+    var result = await mediator.Send(command);
+    if (!result) return Results.NotFound();
+    
+    return Results.Accepted();
+})
+.WithName("CheckoutBasket")
 .WithOpenApi();
 
 app.Run();

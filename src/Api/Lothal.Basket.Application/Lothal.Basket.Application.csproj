@@ -6,6 +6,11 @@
 
   <ItemGroup>
     <PackageReference Include="Lothal.Mediator" Version="1.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\BuildingBlocks\Lothal.BuildingBlocks\Lothal.BuildingBlocks.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

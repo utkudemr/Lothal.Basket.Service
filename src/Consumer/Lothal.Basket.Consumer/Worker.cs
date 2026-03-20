@@ -1,8 +1,11 @@
-using Couchbase.Extensions.DependencyInjection;
-using Couchbase.KeyValue;
-using Lothal.Basket.Consumer.Models;
+using Lothal.Basket.Infrastructure.Data;
+using Lothal.Basket.Domain.Entities;
 using NATS.Client.Core;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Lothal.Basket.Consumer;
 
@@ -10,77 +13,61 @@ public class Worker : BackgroundService
 {
     private readonly ILogger<Worker> _logger;
     private readonly INatsConnection _natsConnection;
-    private readonly IBucketProvider _bucketProvider;
+    private readonly IServiceProvider _serviceProvider;
 
-    public Worker(ILogger<Worker> logger, INatsConnection natsConnection, IBucketProvider bucketProvider)
+    public Worker(ILogger<Worker> logger, INatsConnection natsConnection, IServiceProvider serviceProvider)
     {
         _logger = logger;
         _natsConnection = natsConnection;
-        _bucketProvider = bucketProvider;
+        _serviceProvider = serviceProvider;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        // Couchbase'in tamamen bootstrap olmasını bekle (retry logic)
-        ICouchbaseCollection? collection = null;
-        while (!stoppingToken.IsCancellationRequested && collection == null)
-        {
-            try
-            {
-                var bucket = await _bucketProvider.GetBucketAsync("basket");
-                collection = bucket.DefaultCollection();
-                _logger.LogInformation("Connected to Couchbase bucket 'basket'.");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Couchbase not ready yet, retrying in 5 seconds...");
-                await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
-            }
-        }
+        _logger.LogInformation("Worker starting to listen on NATS subject 'baskets.checkout'");
 
-        if (collection == null) return;
-
-        _logger.LogInformation("Worker starting to listen on NATS subject 'baskets.events'");
-
-        await foreach (var msg in _natsConnection.SubscribeAsync<string>("baskets.events", cancellationToken: stoppingToken))
+        await foreach (var msg in _natsConnection.SubscribeAsync<string>("baskets.checkout", cancellationToken: stoppingToken))
         {
             if (msg.Data == null) continue;
 
-            _logger.LogInformation("Received message payload: {Payload}", msg.Data);
+            _logger.LogInformation("Received checkout message: {Payload}", msg.Data);
 
             try
             {
                 var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                var basketDto = JsonSerializer.Deserialize<BasketDocument>(msg.Data, options);
+                var basket = JsonSerializer.Deserialize<global::Lothal.Basket.Domain.Entities.Basket>(msg.Data, options);
 
-                using var jsonDoc = JsonDocument.Parse(msg.Data);
-                var root = jsonDoc.RootElement;
-                if (!root.TryGetProperty("Id", out var idProp) || !idProp.TryGetGuid(out var basketId))
+                if (basket == null) continue;
+
+                using var scope = _serviceProvider.CreateScope();
+                var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                
+                var trackedCount = dbContext.ChangeTracker.Entries().Count();
+                _logger.LogInformation("Processing basket {BasketId}. Tracked entities count: {Count}", basket.Id, trackedCount);
+
+                // Check If Idempotency (Already processed)
+                var exists = await dbContext.Baskets.AsNoTracking().AnyAsync(b => b.Id == basket.Id, stoppingToken);
+                if (exists)
+                {
+                    _logger.LogWarning("Basket {BasketId} already processed.", basket.Id);
                     continue;
-
-                if (basketDto == null) continue;
-                basketDto.BasketId = basketId;
-                basketDto.Id = $"basket::{basketId}";
-
-                // Simple Idempotency Check using Couchbase Document (Inbox Pattern)
-                var inboxId = $"inbox::{basketDto.BasketId}";
-                try
-                {
-                    await collection.InsertAsync(inboxId, new InboxMessage { Id = inboxId });
-
-                    // If insert succeeds without throwing DocumentExistsException, process the message
-                    await collection.UpsertAsync(basketDto.Id, basketDto);
-
-                    _logger.LogInformation("Successfully processed and saved basket {BasketId} to Couchbase.", basketDto.BasketId);
                 }
-                catch (Couchbase.Core.Exceptions.KeyValue.DocumentExistsException)
+
+                try 
                 {
-                    _logger.LogWarning("Message with BasketId {BasketId} already processed (Inbox pattern handled).", basketDto.BasketId);
+                    dbContext.Baskets.Add(basket);
+                    await dbContext.SaveChangesAsync(stoppingToken);
+                    _logger.LogInformation("Successfully saved basket {BasketId} to Postgres.", basket.Id);
+                }
+                catch (InvalidOperationException ioEx) when (ioEx.Message.Contains("already being tracked"))
+                {
+                    _logger.LogError(ioEx, "Tracking error for basket {BasketId}. Attempting to detach and retry.", basket.Id);
+                    // This is a last resort to see what's going on
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing message from NATS");
+                _logger.LogError(ex, "Error processing checkout message from NATS");
             }
         }
     }

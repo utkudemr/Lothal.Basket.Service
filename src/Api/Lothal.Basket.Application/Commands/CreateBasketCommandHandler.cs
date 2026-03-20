@@ -19,18 +19,11 @@ public class CreateBasketCommandHandler : IRequestHandler<CreateBasketCommand, G
         {
             Id = Guid.NewGuid(),
             CustomerId = request.CustomerId,
-            Items = new List<BasketItem>()
+            Items = new List<BasketItem>(),
+            Status = BasketStatus.Active
         };
 
-        var outboxMessage = new OutboxMessage
-        {
-            Id = Guid.NewGuid(),
-            EventType = "BasketCreated",
-            Payload = System.Text.Json.JsonSerializer.Serialize(basket),
-            OccurredOn = DateTime.UtcNow
-        };
-
-        await _repository.AddBasketAndOutboxAsync(basket, outboxMessage, cancellationToken);
+        await _repository.AddToCacheAsync(basket, cancellationToken);
 
         return basket.Id;
     }

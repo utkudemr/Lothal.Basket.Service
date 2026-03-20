@@ -1,7 +1,10 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace Lothal.Basket.Domain.Entities;
 
 public class BasketItem
 {
+    [Key]
     public Guid Id { get; set; }
     public Guid BasketId { get; set; }
     public Guid ProductId { get; set; }

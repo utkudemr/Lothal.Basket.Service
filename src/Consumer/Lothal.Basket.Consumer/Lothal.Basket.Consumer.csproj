@@ -1,24 +1,26 @@
-<Project Sdk="Microsoft.NET.Sdk.Worker">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <UserSecretsId>dotnet-Lothal.Basket.Consumer-c79795f9-af01-48e7-83c0-31b1b58a377e</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Couchbase.Extensions.DependencyInjection" Version="3.9.0" />
-    <PackageReference Include="CouchbaseNetClient" Version="3.9.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
-    <PackageReference Include="NATS.Net" Version="2.7.2" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <FrameworkReference Include="Microsoft.AspNetCore.App" />
-  </ItemGroup>
-
-  <ItemGroup>
+    <ProjectReference Include="..\..\Api\Lothal.Basket.Infrastructure\Lothal.Basket.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Api\Lothal.Basket.Domain\Lothal.Basket.Domain.csproj" />
     <ProjectReference Include="..\..\BuildingBlocks\Lothal.BuildingBlocks\Lothal.BuildingBlocks.csproj" />
   </ItemGroup>
 </Project>
