@@ -25,6 +25,13 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices(builder.Configuration);
 
+// Register Product API Http Client
+builder.Services.AddHttpClient("ProductApi", client =>
+{
+    // In Docker Compose, the ApiGateway or ProductApi directly can be pinged.
+    client.BaseAddress = new Uri("http://product-api:8080");
+});
+
 // Add NATS Client
 builder.AddCustomNats();
 
@@ -60,6 +67,17 @@ app.MapGet("/api/baskets/{id}", async (Guid id, [FromServices] Mediator mediator
     return Results.Ok(new { Basket = basket, ServedBy = Environment.MachineName });
 })
 .WithName("GetBasketById")
+.WithOpenApi();
+
+app.MapPost("/api/baskets/{id}/items", async (Guid id, [FromBody] AddItemDto dto, [FromServices] Mediator mediator) =>
+{
+    var command = new AddItemToBasketCommand(id, dto.Barcode, dto.Quantity);
+    var result = await mediator.Send(command);
+    if (!result) return Results.BadRequest("Could not add item. Verify barcode exists.");
+    
+    return Results.Accepted();
+})
+.WithName("AddItemToBasket")
 .WithOpenApi();
 
 app.MapPost("/api/baskets/checkout", async (CheckoutBasketCommand command, [FromServices] Mediator mediator) =>

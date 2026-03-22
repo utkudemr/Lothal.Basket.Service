@@ -8,17 +8,17 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
 # Copy csproj files
-COPY ["src/Api/Lothal.Basket.Api/Lothal.Basket.Api.csproj", "src/Api/Lothal.Basket.Api/"]
-COPY ["src/Api/Lothal.Basket.Application/Lothal.Basket.Application.csproj", "src/Api/Lothal.Basket.Application/"]
-COPY ["src/Api/Lothal.Basket.Domain/Lothal.Basket.Domain.csproj", "src/Api/Lothal.Basket.Domain/"]
-COPY ["src/Api/Lothal.Basket.Infrastructure/Lothal.Basket.Infrastructure.csproj", "src/Api/Lothal.Basket.Infrastructure/"]
+COPY ["src/Basket/Lothal.Basket.Api/Lothal.Basket.Api.csproj", "src/Basket/Lothal.Basket.Api/"]
+COPY ["src/Basket/Lothal.Basket.Application/Lothal.Basket.Application.csproj", "src/Basket/Lothal.Basket.Application/"]
+COPY ["src/Basket/Lothal.Basket.Domain/Lothal.Basket.Domain.csproj", "src/Basket/Lothal.Basket.Domain/"]
+COPY ["src/Basket/Lothal.Basket.Infrastructure/Lothal.Basket.Infrastructure.csproj", "src/Basket/Lothal.Basket.Infrastructure/"]
 
 # Restore dependencies
-RUN dotnet restore "./src/Api/Lothal.Basket.Api/Lothal.Basket.Api.csproj"
+RUN dotnet restore "./src/Basket/Lothal.Basket.Api/Lothal.Basket.Api.csproj"
 
 # Copy the rest of the source code
 COPY . .
-WORKDIR "/src/src/Api/Lothal.Basket.Api"
+WORKDIR "/src/src/Basket/Lothal.Basket.Api"
 RUN dotnet build "./Lothal.Basket.Api.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 FROM build AS publish

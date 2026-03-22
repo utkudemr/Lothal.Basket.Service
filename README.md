@@ -7,9 +7,10 @@ Everything is containerized and orchestrated via **Docker Compose**, providing a
 ## 🚀 Features
 
 *   **Basket Service (Producer API)**: A .NET 8 Minimal API handling basket write operations (Create, Get) using **PostgreSQL** (Entity Framework Core).
+*   **Product Service (Data API)**: A .NET 8 Minimal API handling product transactions (Bulk merge, Get) using **Elasticsearch**.
 *   **Clean Architecture & CQRS**: Business logic is completely decoupled using layers (`Api`, `Application`, `Domain`, `Infrastructure`) and the custom `Lothal.Mediator` package.
 *   **Centralized Logging**: Seamlessly configured throughout all microservices using the shared `Lothal.BuildingBlocks` library, directing logs to **VictoriaLogs** via HTTP (Serilog + NDJSON batch formatter).
-*   **Distributed Tracing (OpenTelemetry)**: End-to-end distributed traces collected from all services (Basket API, Consumer, API Gateway) via the shared `Lothal.BuildingBlocks` library and exported to **Jaeger** using OTLP. Traces include ASP.NET Core, HTTP client, NATS, Couchbase, and Npgsql spans.
+*   **Distributed Tracing (OpenTelemetry)**: End-to-end distributed traces collected from all services (Basket API, Product API, Consumer, API Gateway) via the shared `Lothal.BuildingBlocks` library and exported to **Jaeger** using OTLP. Traces include ASP.NET Core, HTTP client, NATS, Couchbase, and Npgsql spans.
 *   **Outbox Pattern**: The Basket API reliably saves domain events to an Outbox table in PostgreSQL within the same transaction as the business entity changes. A background worker then publishes these events to NATS, guaranteeing at-least-once delivery.
 *   **NATS Messaging**: A lightweight, high-performance messaging system used as the event bus to decouple the producer and consumer.
 *   **Basket Consumer (Worker Service)**: A separate .NET 8 worker service that listens to events from NATS.
@@ -39,11 +40,16 @@ Lothal.Basket.Service/
 │   │       └── Telemetry/      # AddCustomTelemetry() — OpenTelemetry → Jaeger (OTLP)
 │   └── Consumer/               # Consumer Microservice
 │       └── Lothal.Basket.Consumer/        # NATS Listener & Couchbase Inbox Integration
+│   └── Product/                # Product Microservice (Product API)
+│       ├── Lothal.Product.Api/             # Minimal API Endpoints
+│       ├── Lothal.Product.Application/     # CQRS Handlers, Queries, Commands
+│       ├── Lothal.Product.Domain/          # Entities
+│       └── Lothal.Product.Infrastructure/  # Elasticsearch Integration
 ```
 
 ## 🐳 Running the Project (Docker Compose)
 
-The easiest way to run the entire architecture (Gateway + Multiple Basket Replicas + Consumer + NATS + PostgreSQL + Couchbase + VictoriaLogs + Grafana + Jaeger) is via Docker Compose.
+The easiest way to run the entire architecture (Gateway + Multiple Basket Replicas + Product API + Consumer + NATS + PostgreSQL + Couchbase + Elasticsearch + VictoriaLogs + Grafana + Jaeger) is via Docker Compose.
 
 1.  Open your terminal in the root directory (where `docker-compose.yml` is located).
 2.  Build and start the containers in detached mode:
@@ -79,6 +85,20 @@ Retrieves a basket. This endpoint is extremely useful for demonstrating the **Ro
 ### ⚖️ Testing Load Balancing
 
 When you execute multiple `GET` or `POST` requests rapidly, inspect the response headers or logs. YARP smoothly distributes your requests across the available replicas (`basket-api-1` and `basket-api-2`), proving that the Docker network load balancing is actively working!
+
+### 3. Products App Endpoints
+
+All product requests are routed via `/product-api/*`.
+
+*   **Get Product:** `GET http://localhost:5024/product-api/api/products/{barcode}`
+*   **Bulk Merge Products:** `POST http://localhost:5024/product-api/api/products/bulk-merge`
+    ```json
+    {
+      "products": [
+        { "barcode": "P2001", "price": 15.00, "name": "Hat", "class": "Accessories", "color": "Black", "size": "L" }
+      ]
+    }
+    ```
 
 ## 🛡️ Rate Limiting (YARP)
 

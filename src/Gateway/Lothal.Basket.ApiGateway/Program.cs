@@ -35,6 +35,16 @@ builder.Services.AddRateLimiter(options =>
         opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
         opt.QueueLimit = 0;
     });
+
+    // Policy for GET /api/gateway/products/{barcode} (Allow more requests)
+    options.AddFixedWindowLimiter("get-product-policy", opt =>
+    {
+        opt.PermitLimit = 20;
+        opt.Window = TimeSpan.FromSeconds(10);
+        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        opt.QueueLimit = 0;
+    });
+
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 });
 
@@ -42,6 +52,7 @@ var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 app.UseRateLimiter();
+
 app.MapReverseProxy();
 
 app.Run();

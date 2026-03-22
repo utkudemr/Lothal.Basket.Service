@@ -19,8 +19,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Api\Lothal.Basket.Infrastructure\Lothal.Basket.Infrastructure.csproj" />
-    <ProjectReference Include="..\..\Api\Lothal.Basket.Domain\Lothal.Basket.Domain.csproj" />
+    <ProjectReference Include="..\..\Basket\Lothal.Basket.Infrastructure\Lothal.Basket.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Basket\Lothal.Basket.Domain\Lothal.Basket.Domain.csproj" />
     <ProjectReference Include="..\..\BuildingBlocks\Lothal.BuildingBlocks\Lothal.BuildingBlocks.csproj" />
   </ItemGroup>
 </Project>

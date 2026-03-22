@@ -12,6 +12,7 @@ services:
       - "5024:8080"
     depends_on:
       - basket-api
+      - product-api
       - victorialogs
 
   basket-api:
@@ -32,6 +33,21 @@ services:
     depends_on:
       - basket-db
       - nats
+      - victorialogs
+
+  product-api:
+    image: ${DOCKER_REGISTRY-}lothalproductapi
+    build:
+      context: .
+      dockerfile: src/Product/Lothal.Product.Api/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - ElasticSearch__Url=http://elasticsearch:9200
+      - Serilog__WriteTo__1__Args__requestUri=http://victorialogs:9428/insert/jsonline?_stream_fields=service,environment&_msg_field=@m&_time_field=@t
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
+    depends_on:
+      - elasticsearch
       - victorialogs
 
   lothal.basket.consumer:
@@ -64,6 +80,18 @@ services:
       - "5432:5432"
     volumes:
       - basket_db_data:/var/lib/postgresql/data
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - xpack.security.http.ssl.enabled=false
+      - xpack.security.transport.ssl.enabled=false
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
 
   nats:
     image: nats:latest
@@ -120,3 +148,4 @@ volumes:
   couchbase_data:
   victoria_logs_data:
   grafana_data:
+  elasticsearch_data:
