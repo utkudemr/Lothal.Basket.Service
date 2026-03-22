@@ -130,6 +130,32 @@ Logs from all services are shipped via HTTP using **Serilog** (NDJSON format) to
 |---|---|
 | VictoriaLogs (query UI) | `http://localhost:9428` |
 | Grafana | `http://localhost:3000` (admin / admin) |
+| Jaeger | `http://localhost:16686` |
+
+## 🚀 Performance Testing (k6)
+
+We use **k6** to validate the system under load. The test script simulates a full user journey: Create Basket → Add Items → Get Basket → Checkout.
+
+### Running via Docker Compose (Recommended)
+This runs k6 within the same Docker network as the services, ensuring perfect connectivity:
+```bash
+docker-compose --profile test up load-test
+```
+
+### Running Locally
+If you have k6 installed:
+```bash
+k6 run tests/k6/load-test.js
+```
+
+### Running via Docker Standalone
+```bash
+docker run --rm -i grafana/k6 run - <tests/k6/load-test.js
+```
+
+### Thresholds
+- **Success Rate**: > 99%
+- **Latency (p95)**: < 500ms
 
 ## 🛠 Stopping the Project
 

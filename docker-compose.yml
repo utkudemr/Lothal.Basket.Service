@@ -143,6 +143,15 @@ services:
     ports:
       - "6379:6379"
 
+  load-test:
+    image: grafana/k6:latest
+    profiles: [ "test" ]
+    volumes:
+      - ./tests/k6:/scripts
+    environment:
+      - BASE_URL=http://lothal.api.gateway:8080
+    command: run /scripts/load-test.js
+
 volumes:
   basket_db_data:
   couchbase_data:
