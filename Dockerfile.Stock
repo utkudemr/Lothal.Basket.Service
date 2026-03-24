@@ -1,0 +1,32 @@
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+USER app
+WORKDIR /app
+EXPOSE 8080
+
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+ARG BUILD_CONFIGURATION=Release
+WORKDIR /src
+
+# Copy csproj files
+COPY ["src/Stock/Lothal.Stock.Api/Lothal.Stock.Api.csproj", "src/Stock/Lothal.Stock.Api/"]
+COPY ["src/Stock/Lothal.Stock.Application/Lothal.Stock.Application.csproj", "src/Stock/Lothal.Stock.Application/"]
+COPY ["src/Stock/Lothal.Stock.Domain/Lothal.Stock.Domain.csproj", "src/Stock/Lothal.Stock.Domain/"]
+COPY ["src/Stock/Lothal.Stock.Infrastructure/Lothal.Stock.Infrastructure.csproj", "src/Stock/Lothal.Stock.Infrastructure/"]
+COPY ["src/BuildingBlocks/Lothal.BuildingBlocks/Lothal.BuildingBlocks.csproj", "src/BuildingBlocks/Lothal.BuildingBlocks/"]
+
+# Restore dependencies
+RUN dotnet restore "./src/Stock/Lothal.Stock.Api/Lothal.Stock.Api.csproj"
+
+# Copy the rest of the source code
+COPY . .
+WORKDIR "/src/src/Stock/Lothal.Stock.Api"
+RUN dotnet build "./Lothal.Stock.Api.csproj" -c $BUILD_CONFIGURATION -o /app/build
+
+FROM build AS publish
+ARG BUILD_CONFIGURATION=Release
+RUN dotnet publish "./Lothal.Stock.Api.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+
+FROM base AS final
+WORKDIR /app
+COPY --from=publish /app/publish .
+ENTRYPOINT ["dotnet", "Lothal.Stock.Api.dll"]

@@ -1,4 +1,4 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
@@ -36,6 +36,16 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lothal.Product.Domain", "src\Product\Lothal.Product.Domain\Lothal.Product.Domain.csproj", "{FCA75F6F-540C-42C2-8D3A-EC306250C44E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lothal.Product.Infrastructure", "src\Product\Lothal.Product.Infrastructure\Lothal.Product.Infrastructure.csproj", "{8167BF45-7B2B-4EC6-9CD2-8D8772291F15}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Stock", "Stock", "{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lothal.Stock.Api", "src\Stock\Lothal.Stock.Api\Lothal.Stock.Api.csproj", "{A1B2C3D4-1111-1111-1111-111111111111}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lothal.Stock.Application", "src\Stock\Lothal.Stock.Application\Lothal.Stock.Application.csproj", "{A1B2C3D4-2222-2222-2222-222222222222}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lothal.Stock.Domain", "src\Stock\Lothal.Stock.Domain\Lothal.Stock.Domain.csproj", "{A1B2C3D4-3333-3333-3333-333333333333}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lothal.Stock.Infrastructure", "src\Stock\Lothal.Stock.Infrastructure\Lothal.Stock.Infrastructure.csproj", "{A1B2C3D4-4444-4444-4444-444444444444}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -90,6 +100,22 @@ Global
 		{8167BF45-7B2B-4EC6-9CD2-8D8772291F15}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8167BF45-7B2B-4EC6-9CD2-8D8772291F15}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8167BF45-7B2B-4EC6-9CD2-8D8772291F15}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1B2C3D4-1111-1111-1111-111111111111}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1B2C3D4-1111-1111-1111-111111111111}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1B2C3D4-1111-1111-1111-111111111111}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1B2C3D4-1111-1111-1111-111111111111}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1B2C3D4-2222-2222-2222-222222222222}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1B2C3D4-2222-2222-2222-222222222222}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1B2C3D4-2222-2222-2222-222222222222}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1B2C3D4-2222-2222-2222-222222222222}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1B2C3D4-3333-3333-3333-333333333333}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1B2C3D4-3333-3333-3333-333333333333}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1B2C3D4-3333-3333-3333-333333333333}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1B2C3D4-3333-3333-3333-333333333333}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1B2C3D4-4444-4444-4444-444444444444}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1B2C3D4-4444-4444-4444-444444444444}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1B2C3D4-4444-4444-4444-444444444444}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1B2C3D4-4444-4444-4444-444444444444}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{7A09F08D-3606-4471-B97A-8E14D5B47E92} = {EB7C3CA7-04EF-4DCE-8DCA-EE7FEB3B2AF0}
@@ -108,5 +134,10 @@ Global
 		{7091B716-F9A1-484C-8FC4-7592E7A66C13} = {63F84F1F-AA5E-4103-B147-B9EC64392819}
 		{FCA75F6F-540C-42C2-8D3A-EC306250C44E} = {63F84F1F-AA5E-4103-B147-B9EC64392819}
 		{8167BF45-7B2B-4EC6-9CD2-8D8772291F15} = {63F84F1F-AA5E-4103-B147-B9EC64392819}
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890} = {EB7C3CA7-04EF-4DCE-8DCA-EE7FEB3B2AF0}
+		{A1B2C3D4-1111-1111-1111-111111111111} = {A1B2C3D4-E5F6-7890-ABCD-EF1234567890}
+		{A1B2C3D4-2222-2222-2222-222222222222} = {A1B2C3D4-E5F6-7890-ABCD-EF1234567890}
+		{A1B2C3D4-3333-3333-3333-333333333333} = {A1B2C3D4-E5F6-7890-ABCD-EF1234567890}
+		{A1B2C3D4-4444-4444-4444-444444444444} = {A1B2C3D4-E5F6-7890-ABCD-EF1234567890}
 	EndGlobalSection
 EndGlobal
