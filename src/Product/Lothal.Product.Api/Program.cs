@@ -47,4 +47,20 @@ app.MapGet("/api/products/{barcode}", async (string barcode, [FromServices] IMed
 .WithName("GetProductByBarcode")
 .WithOpenApi();
 
+app.MapGet("/api/products", async ([FromQuery] int? from, [FromQuery] int? size, [FromServices] IMediator mediator) =>
+{
+    var products = await mediator.Send(new GetAllProductsQuery(from ?? 0, size ?? 100));
+    return Results.Ok(products);
+})
+.WithName("GetAllProducts")
+.WithOpenApi();
+
+app.MapDelete("/api/products/{barcode}", async (string barcode, [FromServices] IMediator mediator) =>
+{
+    var result = await mediator.Send(new DeleteProductCommand(barcode));
+    return result ? Results.NoContent() : Results.NotFound();
+})
+.WithName("DeleteProduct")
+.WithOpenApi();
+
 app.Run();

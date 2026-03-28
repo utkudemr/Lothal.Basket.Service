@@ -16,6 +16,16 @@ builder.Services.AddReverseProxy()
 // Register the custom HTTP client factory
 builder.Services.AddSingleton<IForwarderHttpClientFactory, CustomForwarderHttpClientFactory>();
 
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+
 builder.Services.AddRateLimiter(options =>
 {
     // Policy for GET /api/baskets/{id} (Allow more requests)
@@ -52,6 +62,7 @@ var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 app.UseRateLimiter();
+app.UseCors();
 
 app.MapReverseProxy();
 

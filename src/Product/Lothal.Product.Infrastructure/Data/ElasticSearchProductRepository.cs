@@ -29,6 +29,37 @@ public class ElasticSearchProductRepository : IProductRepository
         return null;
     }
 
+    public async Task<IEnumerable<Lothal.Product.Domain.Entities.Product>> GetAllAsync(int from, int size)
+    {
+        var response = await _client.SearchAsync<Lothal.Product.Domain.Entities.Product>(s => s
+            .Index(IndexName)
+            .From(from)
+            .Size(size)
+            .Query(q => q.MatchAll(_ => { }))
+        );
+
+        if (response.IsValidResponse)
+        {
+            return response.Documents;
+        }
+
+        _logger.LogError("Error fetching all products: {Error}", response.DebugInformation);
+        return Enumerable.Empty<Lothal.Product.Domain.Entities.Product>();
+    }
+
+    public async Task<bool> DeleteAsync(string barcode)
+    {
+        var response = await _client.DeleteAsync<Lothal.Product.Domain.Entities.Product>(barcode, idx => idx.Index(IndexName));
+        
+        if (!response.IsValidResponse)
+        {
+            _logger.LogError("Error deleting product {Barcode}: {Error}", barcode, response.DebugInformation);
+            return false;
+        }
+
+        return response.Result == Result.Deleted || response.Result == Result.NotFound;
+    }
+
     public async Task BulkMergeAsync(IEnumerable<Lothal.Product.Domain.Entities.Product> products)
     {
         var bulkRequest = new BulkRequest(IndexName)

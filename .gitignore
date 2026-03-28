@@ -127,3 +127,14 @@ run_output.txt
 /src/build_output.txt
 /src/build_output2.txt
 /src/run_output.txt
+
+# Lothal Admin UI
+src/UI/lothal-admin-ui/node_modules/
+src/UI/lothal-admin-ui/dist/
+src/UI/lothal-admin-ui/.vite/
+src/UI/lothal-admin-ui/.env.local
+src/UI/lothal-admin-ui/.env.*.local
+src/UI/lothal-admin-ui/npm-debug.log*
+src/UI/lothal-admin-ui/yarn-debug.log*
+src/UI/lothal-admin-ui/yarn-error.log*
+src/UI/lothal-admin-ui/pnpm-debug.log*

@@ -39,6 +39,7 @@ services:
 
   product-api:
     image: ${DOCKER_REGISTRY-}lothalproductapi
+    restart: always
     build:
       context: .
       dockerfile: src/Product/Lothal.Product.Api/Dockerfile
@@ -54,9 +55,10 @@ services:
       - nats
       - stock-api
       - victorialogs
-
+ 
   stock-api:
     image: ${DOCKER_REGISTRY-}lothalstockapi
+    restart: always
     build:
       context: .
       dockerfile: Dockerfile.Stock

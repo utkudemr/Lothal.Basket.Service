@@ -1,0 +1,1 @@
+{"root":["./src/main.ts","./src/api/gateway.ts","./src/stores/products.ts","./src/types/product.ts","./src/app.vue","./src/components/helloworld.vue","./src/components/productmodal.vue","./src/components/producttable.vue","./src/components/stockadjustmodal.vue","./src/components/toast.vue","./src/views/productsview.vue"],"errors":true,"version":"5.9.3"}

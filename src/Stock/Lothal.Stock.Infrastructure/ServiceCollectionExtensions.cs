@@ -16,7 +16,7 @@ public static class ServiceCollectionExtensions
         IConfiguration configuration)
     {
         var connectionString = configuration.GetConnectionString("StockDb")
-            ?? "Host=basket-db;Database=StockDb;Username=postgres;Password=postgres";
+            ?? "Host=basket-db;Database=stockdb;Username=postgres;Password=postgres";
 
         // Scoped repository — opens a fresh connection per request
         services.AddScoped<IStockRepository, PostgresStockRepository>();
