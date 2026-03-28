@@ -8,6 +8,8 @@ Everything is containerized and orchestrated via **Docker Compose**, providing a
 
 *   **Basket Service (Producer API)**: A .NET 8 Minimal API handling basket write operations (Create, Get) using **PostgreSQL** (Entity Framework Core).
 *   **Product Service (Data API)**: A .NET 8 Minimal API handling product transactions (Bulk merge, Get) using **Elasticsearch**.
+*   **Stock Service (Data API)**: A robust .NET 8 microservice managing inventory tracking and synchronization across PostgreSQL and Redis. Integrates directly into NATS for immediate propagation.
+*   **Admin Dashboard (UI)**: A rich, glassmorphic Vue 3 + Vite frontend for visualizing products, managing inventory, and orchestrating bulk warehouse operations.
 *   **Clean Architecture & CQRS**: Business logic is completely decoupled using layers (`Api`, `Application`, `Domain`, `Infrastructure`) and the custom `Lothal.Mediator` package.
 *   **Centralized Logging**: Seamlessly configured throughout all microservices using the shared `Lothal.BuildingBlocks` library, directing logs to **VictoriaLogs** via HTTP (Serilog + NDJSON batch formatter).
 *   **Distributed Tracing (OpenTelemetry)**: End-to-end distributed traces collected from all services (Basket API, Product API, Consumer, API Gateway) via the shared `Lothal.BuildingBlocks` library and exported to **Jaeger** using OTLP. Traces include ASP.NET Core, HTTP client, NATS, Couchbase, and Npgsql spans.
@@ -27,6 +29,7 @@ Lothal.Basket.Service/
 ├── Dockerfile                  # Multi-stage Docker build for Basket Service (Producer)
 ├── Dockerfile.ApiGateway       # Multi-stage Docker build for API Gateway (YARP)
 ├── Dockerfile.Consumer         # Multi-stage Docker build for Basket Consumer
+├── Dockerfile.Stock            # Multi-stage Docker build for Stock Service
 ├── src/
 │   ├── Api/                    # Producer Microservice (Basket API)
 │   │   ├── Lothal.Basket.Api/             # Minimal API Endpoints & Outbox Publisher Background Job
@@ -45,11 +48,18 @@ Lothal.Basket.Service/
 │       ├── Lothal.Product.Application/     # CQRS Handlers, Queries, Commands
 │       ├── Lothal.Product.Domain/          # Entities
 │       └── Lothal.Product.Infrastructure/  # Elasticsearch Integration
+│   └── Stock/                  # Stock Microservice (Stock API)
+│       ├── Lothal.Stock.Api/               # Endpoints for Inventory / Reservations
+│       ├── Lothal.Stock.Application/       # Event handlers and Commands
+│       ├── Lothal.Stock.Domain/            # Stock Entities
+│       └── Lothal.Stock.Infrastructure/    # PostgreSQL & Redis Stock Repositories
+│   └── UI/                     # Frontend Applications
+│       └── lothal-admin-ui/                # Vue 3 + Vite Admin Dashboard
 ```
 
 ## 🐳 Running the Project (Docker Compose)
 
-The easiest way to run the entire architecture (Gateway + Multiple Basket Replicas + Product API + Consumer + NATS + PostgreSQL + Couchbase + Elasticsearch + VictoriaLogs + Grafana + Jaeger) is via Docker Compose.
+The easiest way to run the entire architecture (Gateway + Multiple Basket Replicas + Product API + Stock API + Consumer + NATS + PostgreSQL + Couchbase + Elasticsearch + VictoriaLogs + Grafana + Jaeger) is via Docker Compose.
 
 1.  Open your terminal in the root directory (where `docker-compose.yml` is located).
 2.  Build and start the containers in detached mode:
@@ -58,7 +68,15 @@ The easiest way to run the entire architecture (Gateway + Multiple Basket Replic
     docker compose up -d --build
     ```
 
-> **Note:** The `docker-compose.yml` is configured to spin up **2 replicas** (`deploy: replicas: 2`) of the Basket API automatically to demonstrate load balancing behind the API Gateway.
+> **Note:** The `docker-compose.yml` is configured to spin up **2 replicas** (`deploy: replicas: 2`) of the Basket API and Stock API automatically to demonstrate load balancing behind the API Gateway.
+
+### 🖥️ Running the Admin UI
+
+You can manage products and stocks using the included Vue dashboard natively on your host machine:
+1. `cd src/UI/lothal-admin-ui`
+2. `npm install`
+3. `npm run dev`
+4. Open your browser to `http://localhost:5173/`
 
 ## 🌐 API Endpoints & Testing
 
@@ -97,6 +115,19 @@ All product requests are routed via `/product-api/*`.
       "products": [
         { "barcode": "P2001", "price": 15.00, "name": "Hat", "class": "Accessories", "color": "Black", "size": "L" }
       ]
+    }
+    ```
+
+### 4. Stock App Endpoints
+
+All stock adjustments and queries are routed via `/api/stocks/*`.
+
+*   **Get Stock:** `GET http://localhost:5024/api/stocks/{barcode}`
+*   **Bulk Increase All:** `POST http://localhost:5024/api/stocks/bulk-increase`
+    ```json
+    {
+      "amount": 1000,
+      "transactionId": "b47...uuid"
     }
     ```
 
@@ -181,3 +212,4 @@ docker compose down -v
 *   **Serilog & VictoriaLogs** (Centralized Logging)
 *   **OpenTelemetry & Jaeger** (Distributed Tracing)
 *   **Docker / Docker Compose**
+*   **Vue 3, Vite & Pinia** (Admin Dashboard)

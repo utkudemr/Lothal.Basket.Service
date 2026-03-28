@@ -3,6 +3,7 @@ using MediatR;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using ProductEntity = Lothal.Product.Domain.Entities.Product;
 
 namespace Lothal.Product.Application.Commands;
 
@@ -20,7 +21,7 @@ public class BulkMergeProductsCommandHandler : IRequestHandler<BulkMergeProducts
         if (request.Products == null || !request.Products.Any())
             return false;
 
-        var entities = request.Products.Select(p => new Lothal.Product.Domain.Entities.Product
+        var entities = request.Products.Select(p => new ProductEntity
         {
             Barcode = p.Barcode,
             Price = p.Price,

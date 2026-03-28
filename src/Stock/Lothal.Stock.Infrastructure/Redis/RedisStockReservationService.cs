@@ -90,7 +90,9 @@ public class RedisStockReservationService : IStockReservationService
 
     private async Task<(int status, int available)> ExecuteReserveLuaAsync(IDatabase db, RedisKey key, int quantity)
     {
-        var result = (RedisResult[])await db.ScriptEvaluateAsync(ReserveLua, new RedisKey[] { key }, new RedisValue[] { quantity });
+        var result = (RedisResult[]?)await db.ScriptEvaluateAsync(ReserveLua, new RedisKey[] { key }, new RedisValue[] { quantity });
+        if (result == null || result.Length < 2) return (-1, 0);
+
         return ((int)result[0], (int)result[1]);
     }
 

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useProductStore } from '../stores/products';
+import { computed } from 'vue';
 
 const store = useProductStore();
 
@@ -16,6 +17,10 @@ const getStockBadgeClass = (qty: number) => {
   if (qty < 10) return 'badge-warning';
   return 'badge-success';
 };
+
+const totalPages = computed(() => Math.ceil(store.totalItems / store.pageSize));
+const startItem = computed(() => (store.currentPage - 1) * store.pageSize + 1);
+const endItem = computed(() => Math.min(store.currentPage * store.pageSize, store.totalItems));
 </script>
 
 <template>
@@ -63,8 +68,33 @@ const getStockBadgeClass = (qty: number) => {
         </tr>
       </tbody>
     </table>
-    <div v-if="store.loading" class="loading-overlay">
+    
+    <div v-if="store.loading && store.products.length === 0" class="loading-overlay">
        <div class="spinner"></div>
+    </div>
+
+    <!-- Pagination Footer -->
+    <div class="pagination-footer">
+      <div class="pagination-info">
+        Showing {{ startItem }} - {{ endItem }} of {{ store.totalItems }} products
+      </div>
+      <div class="pagination-controls">
+        <button 
+          class="btn btn-secondary" 
+          :disabled="store.currentPage <= 1 || store.loading"
+          @click="store.setPage(store.currentPage - 1)"
+        >
+          Previous
+        </button>
+        <span class="page-number">Page {{ store.currentPage }} of {{ totalPages }}</span>
+        <button 
+          class="btn btn-secondary" 
+          :disabled="store.currentPage >= totalPages || store.loading"
+          @click="store.setPage(store.currentPage + 1)"
+        >
+          Next
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -94,5 +124,28 @@ const getStockBadgeClass = (qty: number) => {
 }
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+.pagination-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.02);
+}
+.pagination-info {
+  font-size: 0.9rem;
+  color: var(--text-dim);
+}
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.page-number {
+  font-weight: 500;
+  min-width: 100px;
+  text-align: center;
 }
 </style>

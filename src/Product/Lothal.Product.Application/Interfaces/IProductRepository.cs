@@ -1,13 +1,13 @@
-using System.Collections.Generic;
-using System.Threading.Tasks;
+using Lothal.BuildingBlocks.Common;
+using ProductEntity = Lothal.Product.Domain.Entities.Product;
 
 namespace Lothal.Product.Application.Interfaces;
 
 public interface IProductRepository
 {
-    Task<Lothal.Product.Domain.Entities.Product?> GetByBarcodeAsync(string barcode);
-    Task<IEnumerable<Lothal.Product.Domain.Entities.Product>> GetAllAsync(int from, int size);
-    Task BulkMergeAsync(IEnumerable<Lothal.Product.Domain.Entities.Product> products);
+    Task<ProductEntity?> GetByBarcodeAsync(string barcode);
+    Task<PagedResult<ProductEntity>> GetAllAsync(int from, int size);
+    Task BulkMergeAsync(IEnumerable<ProductEntity> products);
     Task<bool> DeleteAsync(string barcode);
-    Task SeedDataAsync(IEnumerable<Lothal.Product.Domain.Entities.Product> products);
+    Task SeedDataAsync(IEnumerable<ProductEntity> products);
 }

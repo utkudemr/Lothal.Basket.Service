@@ -9,7 +9,7 @@ using StackExchange.Redis;
 
 namespace Lothal.Stock.Infrastructure;
 
-public static class ServiceCollectionExtensions
+public static class StockInfrastructureServiceCollectionExtensions
 {
     public static IServiceCollection AddStockInfrastructureServices(
         this IServiceCollection services,
@@ -48,7 +48,12 @@ public static class ServiceCollectionExtensions
                 warehouse_quantity  INTEGER NOT NULL DEFAULT 0,
                 source              TEXT NOT NULL DEFAULT 'UNKNOWN',
                 last_updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
-            )
+            );
+
+            CREATE TABLE IF NOT EXISTS processed_transactions (
+                id          TEXT PRIMARY KEY,
+                created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
             """;
 
         using var cmd = new NpgsqlCommand(ddl, conn);

@@ -5,6 +5,9 @@ import type { ProductWithStock, Product } from '../types/product';
 export const useProductStore = defineStore('products', {
   state: () => ({
     products: [] as ProductWithStock[],
+    totalItems: 0,
+    currentPage: 1,
+    pageSize: 10,
     loading: false,
     error: null as string | null,
   }),
@@ -13,11 +16,15 @@ export const useProductStore = defineStore('products', {
       this.loading = true;
       this.error = null;
       try {
-        const response = await productApi.getAll();
-        const baseProducts = response.data;
+        const from = (this.currentPage - 1) * this.pageSize;
+        const response = await productApi.getAll(from, this.pageSize);
+        const { data } = response;
+        // Handle different casing from backend if necessary
+        const items = data.items || [];
+        const totalCount = data.totalCount ?? 0;
         
-        // Map to include stock as undefined initially
-        this.products = baseProducts.map(p => ({ ...p, stock: undefined }));
+        this.totalItems = totalCount;
+        this.products = items.map((p: Product) => ({ ...p, stock: undefined }));
         
         await this.fetchStocksForCurrentProducts();
       } catch (err: any) {
@@ -25,6 +32,12 @@ export const useProductStore = defineStore('products', {
       } finally {
         this.loading = false;
       }
+    },
+
+    setPage(page: number) {
+      if (page < 1 || (this.totalItems > 0 && page > Math.ceil(this.totalItems / this.pageSize))) return;
+      this.currentPage = page;
+      this.fetchProducts();
     },
 
     async fetchStocksForCurrentProducts() {
@@ -55,7 +68,7 @@ export const useProductStore = defineStore('products', {
     async deleteProduct(barcode: string) {
       try {
         await productApi.delete(barcode);
-        this.products = this.products.filter(p => p.barcode !== barcode);
+        await this.fetchProducts(); // Refresh current page
       } catch (err: any) {
         this.error = "Failed to delete product: " + err.message;
         throw err;
@@ -81,6 +94,20 @@ export const useProductStore = defineStore('products', {
       } catch (err: any) {
         this.error = `Failed to update stock (${mode}): ` + (err.response?.data?.reason || err.message);
         throw err;
+      }
+    },
+
+    async bulkIncreaseStock(amount: number) {
+      this.loading = true;
+      console.log('[Store] bulkIncreaseStock called. API keys:', Object.keys(stockApi));
+      try {
+        await stockApi.bulkAdjustAllStocks(amount);
+        await this.fetchProducts(); // Refresh current page to see changes
+      } catch (err: any) {
+        this.error = "Bulk stock update failed: " + err.message;
+        throw err;
+      } finally {
+        this.loading = false;
       }
     }
   }

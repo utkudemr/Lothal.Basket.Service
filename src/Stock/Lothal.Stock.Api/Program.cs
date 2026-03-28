@@ -1,15 +1,13 @@
+using Lothal.Stock.Api;
 using Lothal.BuildingBlocks.Logging;
 using Lothal.BuildingBlocks.Telemetry;
-using Lothal.Stock.Application;
 using Lothal.Stock.Application.Commands;
 using Lothal.Stock.Application.Interfaces;
 using Lothal.Stock.Application.Queries;
-using Lothal.Stock.Infrastructure;
 using MediatR;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.DependencyInjection;
+using Lothal.Stock.Application;
+using Lothal.Stock.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,6 +22,10 @@ builder.Services.AddSwaggerGen();
 // ── Application + Infrastructure ─────────────────────────────────────────────
 builder.Services.AddStockApplicationServices();
 builder.Services.AddStockInfrastructureServices(builder.Configuration);
+
+builder.Services.ConfigureHttpJsonOptions(options => {
+    options.SerializerOptions.PropertyNameCaseInsensitive = true;
+});
 
 var app = builder.Build();
 
@@ -58,28 +60,33 @@ app.MapPost("/api/stocks/{barcode}/reserve", async (
 
     return result.Status switch
     {
-        ReservationStatus.Success          => Results.Ok(new { reserved = request.Quantity, remaining = result.AvailableQuantity }),
+        ReservationStatus.Success => Results.Ok(new { reserved = request.Quantity, remaining = result.AvailableQuantity }),
         ReservationStatus.InsufficientStock => Results.Conflict(new { reason = "InsufficientStock", available = result.AvailableQuantity }),
-        ReservationStatus.NotFound         => Results.NotFound(new { reason = "StockNotFound", barcode }),
-        _                                  => Results.Problem("Unexpected reservation error")
+        ReservationStatus.NotFound => Results.NotFound(new { reason = "StockNotFound", barcode }),
+        _ => Results.Problem("Unexpected reservation error")
     };
 })
 .WithName("ReserveStock")
 .WithOpenApi();
 
-// ── POST /api/stocks/{barcode}/release ───────────────────────────────────────
-app.MapPost("/api/stocks/{barcode}/release", async (
-    string barcode,
-    [FromBody] StockQuantityRequest request,
+app.MapPost("/api/stocks/release", async (
+    [FromBody] ReleaseStockCommand command,
     [FromServices] IMediator mediator) =>
 {
-    await mediator.Send(new ReleaseStockCommand(barcode, request.Quantity));
-    return Results.Ok(new { released = request.Quantity });
+    await mediator.Send(command);
+    return Results.Ok();
 })
-.WithName("ReleaseStock")
+.WithName("ReleaseStockGlobal")
+.WithOpenApi();
+
+app.MapPost("/api/stocks/bulk-increase", async (
+    [FromBody] BulkIncreaseStockCommand command,
+    [FromServices] IMediator mediator) =>
+{
+    await mediator.Send(command);
+    return Results.Ok();
+})
+.WithName("BulkIncreaseStock")
 .WithOpenApi();
 
 app.Run();
-
-/// <summary>Request body for reserve/release endpoints.</summary>
-public record StockQuantityRequest(int Quantity);

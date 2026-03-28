@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Lothal.Product.Application.Commands;
 using Lothal.Product.Application.Queries;
+using ProductEntity = Lothal.Product.Domain.Entities.Product;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -49,8 +50,8 @@ app.MapGet("/api/products/{barcode}", async (string barcode, [FromServices] IMed
 
 app.MapGet("/api/products", async ([FromQuery] int? from, [FromQuery] int? size, [FromServices] IMediator mediator) =>
 {
-    var products = await mediator.Send(new GetAllProductsQuery(from ?? 0, size ?? 100));
-    return Results.Ok(products);
+    var pagedResult = await mediator.Send(new GetAllProductsQuery(from ?? 0, size ?? 100));
+    return Results.Ok(pagedResult);
 })
 .WithName("GetAllProducts")
 .WithOpenApi();

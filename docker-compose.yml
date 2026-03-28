@@ -59,6 +59,8 @@ services:
   stock-api:
     image: ${DOCKER_REGISTRY-}lothalstockapi
     restart: always
+    deploy:
+      replicas: 2
     build:
       context: .
       dockerfile: Dockerfile.Stock

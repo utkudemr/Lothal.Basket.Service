@@ -1,7 +1,8 @@
 using Elastic.Clients.Elasticsearch;
 using Elastic.Clients.Elasticsearch.Core.Bulk;
 using Lothal.Product.Application.Interfaces;
-using Lothal.Product.Domain.Entities;
+using ProductEntity = Lothal.Product.Domain.Entities.Product;
+using Lothal.BuildingBlocks.Common;
 using Microsoft.Extensions.Logging;
 
 namespace Lothal.Product.Infrastructure.Data;
@@ -18,9 +19,9 @@ public class ElasticSearchProductRepository : IProductRepository
         _logger = logger;
     }
 
-    public async Task<Lothal.Product.Domain.Entities.Product?> GetByBarcodeAsync(string barcode)
+    public async Task<ProductEntity?> GetByBarcodeAsync(string barcode)
     {
-        var response = await _client.GetAsync<Lothal.Product.Domain.Entities.Product>(barcode, idx => idx.Index(IndexName));
+        var response = await _client.GetAsync<ProductEntity>(barcode, idx => idx.Index(IndexName));
         if (response.IsValidResponse && response.Found)
         {
             return response.Source;
@@ -29,27 +30,32 @@ public class ElasticSearchProductRepository : IProductRepository
         return null;
     }
 
-    public async Task<IEnumerable<Lothal.Product.Domain.Entities.Product>> GetAllAsync(int from, int size)
+    public async Task<PagedResult<ProductEntity>> GetAllAsync(int from, int size)
     {
-        var response = await _client.SearchAsync<Lothal.Product.Domain.Entities.Product>(s => s
+        var response = await _client.SearchAsync<ProductEntity>(s => s
             .Index(IndexName)
             .From(from)
             .Size(size)
+            .Sort(srt => srt.Field(f => f.Barcode, d => d.Order(SortOrder.Asc)))
             .Query(q => q.MatchAll(_ => { }))
         );
 
         if (response.IsValidResponse)
         {
-            return response.Documents;
+            return new PagedResult<ProductEntity>(
+                response.Documents, 
+                (int)response.Total);
         }
 
         _logger.LogError("Error fetching all products: {Error}", response.DebugInformation);
-        return Enumerable.Empty<Lothal.Product.Domain.Entities.Product>();
+        return new PagedResult<ProductEntity>(
+            Enumerable.Empty<ProductEntity>(), 
+            0);
     }
 
     public async Task<bool> DeleteAsync(string barcode)
     {
-        var response = await _client.DeleteAsync<Lothal.Product.Domain.Entities.Product>(barcode, idx => idx.Index(IndexName));
+        var response = await _client.DeleteAsync<ProductEntity>(barcode, idx => idx.Index(IndexName));
         
         if (!response.IsValidResponse)
         {
@@ -60,7 +66,7 @@ public class ElasticSearchProductRepository : IProductRepository
         return response.Result == Result.Deleted || response.Result == Result.NotFound;
     }
 
-    public async Task BulkMergeAsync(IEnumerable<Lothal.Product.Domain.Entities.Product> products)
+    public async Task BulkMergeAsync(IEnumerable<ProductEntity> products)
     {
         var bulkRequest = new BulkRequest(IndexName)
         {
@@ -71,7 +77,7 @@ public class ElasticSearchProductRepository : IProductRepository
         {
             // use barcode as the document ID for deduplication and direct gets
             product.Id = product.Barcode;
-            bulkRequest.Operations.Add(new BulkIndexOperation<Lothal.Product.Domain.Entities.Product>(product) { Id = product.Barcode });
+            bulkRequest.Operations.Add(new BulkIndexOperation<ProductEntity>(product) { Id = product.Barcode });
         }
 
         var response = await _client.BulkAsync(bulkRequest);
@@ -81,7 +87,7 @@ public class ElasticSearchProductRepository : IProductRepository
         }
     }
 
-    public async Task SeedDataAsync(IEnumerable<Lothal.Product.Domain.Entities.Product> products)
+    public async Task SeedDataAsync(IEnumerable<ProductEntity> products)
     {
         var existsResponse = await _client.Indices.ExistsAsync(IndexName);
         if (!existsResponse.Exists)
@@ -89,7 +95,7 @@ public class ElasticSearchProductRepository : IProductRepository
             _logger.LogInformation("Products index does not exist, creating and seeding.");
             var createResponse = await _client.Indices.CreateAsync(IndexName, c => c
                 .Mappings(m => m
-                    .Properties<Lothal.Product.Domain.Entities.Product>(p => p
+                    .Properties<ProductEntity>(p => p
                         .Keyword(k => k.Barcode)
                         .Text(t => t.Name)
                         .Keyword(k => k.Class)
@@ -110,3 +116,4 @@ public class ElasticSearchProductRepository : IProductRepository
         }
     }
 }
+

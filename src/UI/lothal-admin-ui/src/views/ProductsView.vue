@@ -4,12 +4,14 @@ import { useProductStore } from '../stores/products';
 import ProductTable from '../components/ProductTable.vue';
 import ProductModal from '../components/ProductModal.vue';
 import StockAdjustModal from '../components/StockAdjustModal.vue';
+import BulkConfirmModal from '../components/BulkConfirmModal.vue';
 import type { Product } from '../types/product';
 
 const store = useProductStore();
 
 const showProductModal = ref(false);
 const showStockModal = ref(false);
+const showBulkModal = ref(false);
 const selectedProduct = ref<Product | null>(null);
 
 onMounted(() => {
@@ -31,6 +33,22 @@ const openStockAdjust = (product: Product) => {
   showStockModal.value = true;
 };
 
+const bulkAddStockPrompt = () => {
+  showBulkModal.value = true;
+};
+
+const executeBulkStock = async () => {
+  console.log('[UI] User confirmed bulk stock update');
+  try {
+    await store.bulkIncreaseStock(1000);
+    showBulkModal.value = false;
+    alert('Bulk stock adjustment applied successfully!');
+  } catch (err: any) {
+    console.error('[UI] Bulk stock update failed', err);
+    // Error handled by store
+  }
+};
+
 const handleSaveProduct = async (data: Product) => {
   try {
     await store.upsertProduct(data);
@@ -48,19 +66,24 @@ const handleSaveProduct = async (data: Product) => {
         <h1>Stock & Product Management</h1>
         <p class="text-dim">Manage your inventory across the Lothal core services.</p>
       </div>
-      <button class="btn btn-primary" @click="openCreate">
-        <span>+</span> Add New Product
-      </button>
+      <div class="header-actions">
+        <button class="btn btn-secondary" @click="bulkAddStockPrompt" :disabled="store.loading">
+          📦 Bulk Add 1000 Stock
+        </button>
+        <button class="btn btn-primary" @click="openCreate">
+          <span>+</span> Add New Product
+        </button>
+      </div>
     </header>
 
     <div class="stats-overview animate-fade-in" style="animation-delay: 0.1s">
       <div class="glass-card stat">
         <label>Total Products</label>
-        <div class="val">{{ store.products.length }}</div>
+        <div class="val">{{ store.totalItems }}</div>
       </div>
       <div class="glass-card stat">
         <label>Low Stock</label>
-        <div class="val">{{ store.products.filter(p => (p.stock?.warehouseQuantity ?? 0) < 10).length }}</div>
+        <div class="val">{{ store.products.filter(p => (p.stock?.warehouseQuantity ?? 0) < 10).length }} (Page)</div>
       </div>
     </div>
 
@@ -82,6 +105,13 @@ const handleSaveProduct = async (data: Product) => {
       :show="showStockModal" 
       :product="selectedProduct"
       @close="showStockModal = false"
+    />
+
+    <BulkConfirmModal 
+      :show="showBulkModal" 
+      :loading="store.loading"
+      @close="showBulkModal = false"
+      @confirm="executeBulkStock" 
     />
   </main>
 </template>

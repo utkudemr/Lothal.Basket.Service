@@ -8,9 +8,14 @@ const gatewayClient = axios.create({
   },
 });
 
+export interface PagedResult<T> {
+  items: T[];
+  totalCount: number;
+}
+
 export const productApi = {
   getAll: (from = 0, size = 100) => 
-    gatewayClient.get<Product[]>(`/api/gateway/products?from=${from}&size=${size}`),
+    gatewayClient.get<PagedResult<Product>>(`/api/gateway/products?from=${from}&size=${size}`),
   
   getByBarcode: (barcode: string) => 
     gatewayClient.get<Product>(`/api/gateway/products/${barcode}`),
@@ -32,6 +37,21 @@ export const stockApi = {
   reserve: (barcode: string, quantity: number) => 
     gatewayClient.post(`/api/stocks/${barcode}/reserve`, { quantity }),
   
-  release: (barcode: string, quantity: number) => 
-    gatewayClient.post(`/api/stocks/${barcode}/release`, { quantity }),
+  release: (barcode: string, quantity: number) => {
+    const transactionId = (window.crypto && window.crypto.randomUUID) 
+      ? window.crypto.randomUUID() 
+      : Math.random().toString(36).substring(2) + Date.now().toString(36);
+    return gatewayClient.post(`/api/stocks/release`, { barcode, quantity, transactionId });
+  },
+
+  bulkAdjustAllStocks: (amount: number) => {
+    const transactionId = (window.crypto && window.crypto.randomUUID) 
+      ? window.crypto.randomUUID() 
+      : Math.random().toString(36).substring(2) + Date.now().toString(36);
+    
+    console.log(`[API] Bulk adjust requested: amount=${amount}, transactionId=${transactionId}`);
+    return gatewayClient.post(`/api/stocks/bulk-increase`, { amount, transactionId });
+  },
 };
+
+console.log('[API] stockApi module loaded. Keys:', Object.keys(stockApi));

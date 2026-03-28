@@ -66,4 +66,36 @@ public class PostgresStockRepository : IStockRepository
 
         _logger.LogDebug("PostgreSQL Upsert {Barcode} qty={Qty}", document.Barcode, document.WarehouseQuantity);
     }
+
+    public async Task<bool> TryRecordTransactionAsync(string transactionId, CancellationToken ct = default)
+    {
+        await using var conn = new NpgsqlConnection(_connectionString);
+
+        const string sql = """
+            INSERT INTO processed_transactions (id, created_at)
+            VALUES (@Id, NOW())
+            ON CONFLICT (id) DO NOTHING
+            """;
+
+        var rowsAffected = await conn.ExecuteAsync(
+            new CommandDefinition(sql, new { Id = transactionId }, cancellationToken: ct));
+
+        return rowsAffected > 0;
+    }
+
+    public async Task BulkIncreaseAllAsync(int amount, CancellationToken ct = default)
+    {
+        await using var conn = new NpgsqlConnection(_connectionString);
+
+        const string sql = """
+            UPDATE stocks
+            SET warehouse_quantity = warehouse_quantity + @Amount,
+                last_updated_at    = NOW()
+            """;
+
+        await conn.ExecuteAsync(
+            new CommandDefinition(sql, new { Amount = amount }, cancellationToken: ct));
+
+        _logger.LogInformation("PostgreSQL BulkIncreaseAll +{Amount} for all products", amount);
+    }
 }
