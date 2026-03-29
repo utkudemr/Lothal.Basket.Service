@@ -97,11 +97,10 @@ export const useProductStore = defineStore('products', {
       }
     },
 
-    async bulkIncreaseStock(amount: number) {
+    async bulkIncreaseStock(items: Array<{ barcode: string; amount: number }>) {
       this.loading = true;
-      console.log('[Store] bulkIncreaseStock called. API keys:', Object.keys(stockApi));
       try {
-        await stockApi.bulkAdjustAllStocks(amount);
+        await stockApi.bulkAdjustStocks(items);
         await this.fetchProducts(); // Refresh current page to see changes
       } catch (err: any) {
         this.error = "Bulk stock update failed: " + err.message;

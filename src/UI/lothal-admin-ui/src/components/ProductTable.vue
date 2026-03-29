@@ -4,7 +4,28 @@ import { computed } from 'vue';
 
 const store = useProductStore();
 
-const emit = defineEmits(['edit-product', 'adjust-stock']);
+const props = defineProps<{
+  selectedBarcodes: string[];
+}>();
+
+const emit = defineEmits(['edit-product', 'adjust-stock', 'update:selectedBarcodes']);
+
+const isSelected = (barcode: string) => props.selectedBarcodes.includes(barcode);
+
+const toggleSelection = (barcode: string) => {
+  const newSelection = isSelected(barcode)
+    ? props.selectedBarcodes.filter(id => id !== barcode)
+    : [...props.selectedBarcodes, barcode];
+  emit('update:selectedBarcodes', newSelection);
+};
+
+const toggleSelectAll = () => {
+  if (store.products.length > 0 && props.selectedBarcodes.length === store.products.length) {
+    emit('update:selectedBarcodes', []);
+  } else {
+    emit('update:selectedBarcodes', store.products.map(p => p.barcode));
+  }
+};
 
 const deleteProduct = async (barcode: string) => {
   if (confirm('Are you sure you want to delete this product?')) {
@@ -28,6 +49,13 @@ const endItem = computed(() => Math.min(store.currentPage * store.pageSize, stor
     <table>
       <thead>
         <tr>
+          <th style="width: 40px;">
+            <input 
+              type="checkbox" 
+              :checked="store.products.length > 0 && selectedBarcodes.length === store.products.length"
+              @change="toggleSelectAll"
+            />
+          </th>
           <th>Barcode</th>
           <th>Name</th>
           <th>Class/Color/Size</th>
@@ -37,7 +65,14 @@ const endItem = computed(() => Math.min(store.currentPage * store.pageSize, stor
         </tr>
       </thead>
       <tbody>
-        <tr v-for="product in store.products" :key="product.barcode" class="animate-fade-in">
+        <tr v-for="product in store.products" :key="product.barcode" class="animate-fade-in" :class="{ 'row-selected': isSelected(product.barcode) }">
+          <td>
+            <input 
+              type="checkbox" 
+              :checked="isSelected(product.barcode)"
+              @change="toggleSelection(product.barcode)"
+            />
+          </td>
           <td><code>{{ product.barcode }}</code></td>
           <td><strong>{{ product.name }}</strong></td>
           <td>{{ product.class }} / {{ product.color }} / {{ product.size }}</td>
@@ -147,5 +182,8 @@ const endItem = computed(() => Math.min(store.currentPage * store.pageSize, stor
   font-weight: 500;
   min-width: 100px;
   text-align: center;
+}
+.row-selected {
+  background: rgba(124, 58, 237, 0.05);
 }
 </style>

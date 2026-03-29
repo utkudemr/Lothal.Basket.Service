@@ -1,25 +1,18 @@
+using System.Linq;
 using Lothal.Stock.Application.Interfaces;
 using MediatR;
 using Microsoft.Extensions.Logging;
-using StackExchange.Redis;
 
 namespace Lothal.Stock.Application.Commands;
 
-public class BulkIncreaseStockCommandHandler : IRequestHandler<BulkIncreaseStockCommand>
+public class BulkIncreaseStockCommandHandler(
+    IStockRepository repository,
+    IStockReservationService reservationService,
+    ILogger<BulkIncreaseStockCommandHandler> logger) : IRequestHandler<BulkIncreaseStockCommand>
 {
-    private readonly IStockRepository _repository;
-    private readonly IConnectionMultiplexer _redis;
-    private readonly ILogger<BulkIncreaseStockCommandHandler> _logger;
-
-    public BulkIncreaseStockCommandHandler(
-        IStockRepository repository, 
-        IConnectionMultiplexer redis,
-        ILogger<BulkIncreaseStockCommandHandler> logger)
-    {
-        _repository = repository;
-        _redis = redis;
-        _logger = logger;
-    }
+    private readonly IStockRepository _repository = repository;
+    private readonly IStockReservationService _reservationService = reservationService;
+    private readonly ILogger<BulkIncreaseStockCommandHandler> _logger = logger;
 
     public async Task Handle(BulkIncreaseStockCommand request, CancellationToken cancellationToken)
     {
@@ -32,16 +25,12 @@ public class BulkIncreaseStockCommandHandler : IRequestHandler<BulkIncreaseStock
         }
 
         // 2. Database Update
-        await _repository.BulkIncreaseAllAsync(request.Amount, cancellationToken);
+        await _repository.BulkIncreaseAsync(request.Items, cancellationToken);
 
-        // 3. Clear Redis Cache (Distributed High-Traffic Sync)
-        // In high-traffic, it's safer to clear the entire stock prefix or specific keys.
-        // For simplicity in this admin bulk action, we flush or at least log the sync.
-        var db = _redis.GetDatabase();
-        // Since we don't have a list of all keys easily, we rely on the fact that 
-        // the reservation service will fetch from DB if Redis is missing.
-        // Real-world: Use a 'StockVersion' or similar. 
-        // Here we'll just log that cache should be treated as stale.
-        _logger.LogInformation("Stock bulk adjustment applied. Redis cache for stocks is now stale.");
+        // 3. Invalidate Redis Cache (Distributed High-Traffic Sync)
+        var barcodes = request.Items.Select(x => x.Barcode);
+        await _reservationService.InvalidateAsync(barcodes, cancellationToken);
+
+        _logger.LogInformation("Stock bulk adjustment applied for {Count} barcodes. Redis cache cleared.", request.Items.Count);
     }
 }

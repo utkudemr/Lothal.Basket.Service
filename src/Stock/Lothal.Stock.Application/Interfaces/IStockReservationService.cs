@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace Lothal.Stock.Application.Interfaces;
 
 /// <summary>Result returned from a stock reservation attempt.</summary>
@@ -29,4 +31,9 @@ public interface IStockReservationService
     /// Called during upsert to keep Redis in sync with the warehouse feed.
     /// </summary>
     Task SeedAsync(string barcode, int quantity, CancellationToken ct = default);
+
+    /// <summary>
+    /// Removes the stock keys from Redis, forcing the next request to re-fetch from PostgreSQL.
+    /// </summary>
+    Task InvalidateAsync(IEnumerable<string> barcodes, CancellationToken ct = default);
 }

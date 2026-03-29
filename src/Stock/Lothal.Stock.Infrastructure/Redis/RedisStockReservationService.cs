@@ -13,11 +13,14 @@ namespace Lothal.Stock.Infrastructure.Redis;
 ///                [-1, 0]        on cache miss (caller seeds from PG and retries once)
 ///                [-2, current]  on insufficient stock
 /// </summary>
-public class RedisStockReservationService : IStockReservationService
+public class RedisStockReservationService(
+    IConnectionMultiplexer redis,
+    IStockRepository repository,
+    ILogger<RedisStockReservationService> logger) : IStockReservationService
 {
-    private readonly IConnectionMultiplexer _redis;
-    private readonly IStockRepository _repository;
-    private readonly ILogger<RedisStockReservationService> _logger;
+    private readonly IConnectionMultiplexer _redis = redis;
+    private readonly IStockRepository _repository = repository;
+    private readonly ILogger<RedisStockReservationService> _logger = logger;
 
     // Atomic Lua: check availability and decrement in one round-trip
     private const string ReserveLua = """
@@ -33,16 +36,6 @@ public class RedisStockReservationService : IStockReservationService
         local remaining = tonumber(redis.call('DECRBY', KEYS[1], requested))
         return {0, remaining}
         """;
-
-    public RedisStockReservationService(
-        IConnectionMultiplexer redis,
-        IStockRepository repository,
-        ILogger<RedisStockReservationService> logger)
-    {
-        _redis = redis;
-        _repository = repository;
-        _logger = logger;
-    }
 
     public async Task<ReservationResult> ReserveAsync(string barcode, int quantity, CancellationToken ct = default)
     {
@@ -68,9 +61,9 @@ public class RedisStockReservationService : IStockReservationService
 
         return status switch
         {
-            0  => new ReservationResult(ReservationStatus.Success, available),
+            0 => new ReservationResult(ReservationStatus.Success, available),
             -2 => new ReservationResult(ReservationStatus.InsufficientStock, available),
-            _  => new ReservationResult(ReservationStatus.NotFound)
+            _ => new ReservationResult(ReservationStatus.NotFound)
         };
     }
 
@@ -88,9 +81,20 @@ public class RedisStockReservationService : IStockReservationService
         _logger.LogDebug("Redis seeded {Barcode} = {Qty}", barcode, quantity);
     }
 
-    private async Task<(int status, int available)> ExecuteReserveLuaAsync(IDatabase db, RedisKey key, int quantity)
+    public async Task InvalidateAsync(IEnumerable<string> barcodes, CancellationToken ct = default)
     {
-        var result = (RedisResult[]?)await db.ScriptEvaluateAsync(ReserveLua, new RedisKey[] { key }, new RedisValue[] { quantity });
+        var db = _redis.GetDatabase();
+        var keys = barcodes.Select(b => StockKey(b)).ToArray();
+
+        if (keys.Length == 0) return;
+
+        await db.KeyDeleteAsync(keys);
+        _logger.LogInformation("Redis invalidated {Count} stock keys", keys.Length);
+    }
+
+    private static async Task<(int status, int available)> ExecuteReserveLuaAsync(IDatabase db, RedisKey key, int quantity)
+    {
+        var result = (RedisResult[]?)await db.ScriptEvaluateAsync(ReserveLua, [key], [quantity]);
         if (result == null || result.Length < 2) return (-1, 0);
 
         return ((int)result[0], (int)result[1]);

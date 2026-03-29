@@ -4,18 +4,12 @@ using Microsoft.Extensions.Logging;
 
 namespace Lothal.Stock.Application.Commands;
 
-public class ReserveStockCommandHandler : IRequestHandler<ReserveStockCommand, ReservationResult>
+public class ReserveStockCommandHandler(
+    IStockReservationService reservationService,
+    ILogger<ReserveStockCommandHandler> logger) : IRequestHandler<ReserveStockCommand, ReservationResult>
 {
-    private readonly IStockReservationService _reservationService;
-    private readonly ILogger<ReserveStockCommandHandler> _logger;
-
-    public ReserveStockCommandHandler(
-        IStockReservationService reservationService,
-        ILogger<ReserveStockCommandHandler> logger)
-    {
-        _reservationService = reservationService;
-        _logger = logger;
-    }
+    private readonly IStockReservationService _reservationService = reservationService;
+    private readonly ILogger<ReserveStockCommandHandler> _logger = logger;
 
     public async Task<ReservationResult> Handle(ReserveStockCommand request, CancellationToken cancellationToken)
     {

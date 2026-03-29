@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, computed } from 'vue';
 import { useProductStore } from '../stores/products';
 import ProductTable from '../components/ProductTable.vue';
 import ProductModal from '../components/ProductModal.vue';
@@ -13,6 +13,7 @@ const showProductModal = ref(false);
 const showStockModal = ref(false);
 const showBulkModal = ref(false);
 const selectedProduct = ref<Product | null>(null);
+const selectedBarcodes = ref<string[]>([]);
 
 onMounted(() => {
   store.fetchProducts();
@@ -34,18 +35,26 @@ const openStockAdjust = (product: Product) => {
 };
 
 const bulkAddStockPrompt = () => {
+  if (selectedBarcodes.value.length === 0) {
+    alert('Please select at least one product to increase stock.');
+    return;
+  }
   showBulkModal.value = true;
 };
 
-const executeBulkStock = async () => {
-  console.log('[UI] User confirmed bulk stock update');
+const selectedProductsForBulk = computed(() => 
+  store.products.filter(p => selectedBarcodes.value.includes(p.barcode))
+);
+
+const executeBulkStock = async (items: Array<{ barcode: string, amount: number }>) => {
+  console.log('[UI] User confirmed bulk stock update for', items.length, 'items');
   try {
-    await store.bulkIncreaseStock(1000);
+    await store.bulkIncreaseStock(items);
     showBulkModal.value = false;
+    selectedBarcodes.value = []; // Clear selection after success
     alert('Bulk stock adjustment applied successfully!');
   } catch (err: any) {
     console.error('[UI] Bulk stock update failed', err);
-    // Error handled by store
   }
 };
 
@@ -68,7 +77,7 @@ const handleSaveProduct = async (data: Product) => {
       </div>
       <div class="header-actions">
         <button class="btn btn-secondary" @click="bulkAddStockPrompt" :disabled="store.loading">
-          📦 Bulk Add 1000 Stock
+          📦 Bulk Increase ({{ selectedBarcodes.length }})
         </button>
         <button class="btn btn-primary" @click="openCreate">
           <span>+</span> Add New Product
@@ -88,6 +97,7 @@ const handleSaveProduct = async (data: Product) => {
     </div>
 
     <ProductTable 
+      v-model:selectedBarcodes="selectedBarcodes"
       @edit-product="openEdit" 
       @adjust-stock="openStockAdjust" 
       style="animation-delay: 0.2s"
@@ -110,6 +120,7 @@ const handleSaveProduct = async (data: Product) => {
     <BulkConfirmModal 
       :show="showBulkModal" 
       :loading="store.loading"
+      :selectedProducts="selectedProductsForBulk"
       @close="showBulkModal = false"
       @confirm="executeBulkStock" 
     />

@@ -44,13 +44,13 @@ export const stockApi = {
     return gatewayClient.post(`/api/stocks/release`, { barcode, quantity, transactionId });
   },
 
-  bulkAdjustAllStocks: (amount: number) => {
+  bulkAdjustStocks: (items: Array<{ barcode: string; amount: number }>) => {
     const transactionId = (window.crypto && window.crypto.randomUUID) 
       ? window.crypto.randomUUID() 
       : Math.random().toString(36).substring(2) + Date.now().toString(36);
     
-    console.log(`[API] Bulk adjust requested: amount=${amount}, transactionId=${transactionId}`);
-    return gatewayClient.post(`/api/stocks/bulk-increase`, { amount, transactionId });
+    console.log(`[API] Bulk adjust requested: count=${items.length}, transactionId=${transactionId}`);
+    return gatewayClient.post(`/api/stocks/bulk-increase`, { items, transactionId });
   },
 };
 

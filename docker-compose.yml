@@ -19,11 +19,12 @@ services:
 
   basket-api:
     image: ${DOCKER_REGISTRY-}lothalbasketapi
+    deploy:
+      replicas: 2
+    restart: always
     build:
       context: .
       dockerfile: Dockerfile
-    deploy:
-      replicas: 2
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:8080
@@ -33,9 +34,12 @@ services:
       - Serilog__WriteTo__1__Args__requestUri=http://victorialogs:9428/insert/jsonline?_stream_fields=service,environment&_msg_field=@m&_time_field=@t
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
     depends_on:
-      - basket-db
-      - nats
-      - victorialogs
+      basket-db:
+        condition: service_healthy
+      nats:
+        condition: service_started
+      victorialogs:
+        condition: service_started
 
   product-api:
     image: ${DOCKER_REGISTRY-}lothalproductapi
@@ -51,10 +55,14 @@ services:
       - Serilog__WriteTo__1__Args__requestUri=http://victorialogs:9428/insert/jsonline?_stream_fields=service,environment&_msg_field=@m&_time_field=@t
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
     depends_on:
-      - elasticsearch
-      - nats
-      - stock-api
-      - victorialogs
+      elasticsearch:
+        condition: service_started
+      nats:
+        condition: service_started
+      stock-api:
+        condition: service_started
+      victorialogs:
+        condition: service_started
  
   stock-api:
     image: ${DOCKER_REGISTRY-}lothalstockapi
@@ -73,10 +81,14 @@ services:
       - Serilog__WriteTo__1__Args__requestUri=http://victorialogs:9428/insert/jsonline?_stream_fields=service,environment&_msg_field=@m&_time_field=@t
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
     depends_on:
-      - basket-db
-      - redis
-      - nats
-      - victorialogs
+      basket-db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      nats:
+        condition: service_started
+      victorialogs:
+        condition: service_started
 
   lothal.basket.consumer:
 
@@ -95,9 +107,12 @@ services:
       - Serilog__WriteTo__1__Args__requestUri=http://victorialogs:9428/insert/jsonline?_stream_fields=service,environment&_msg_field=@m&_time_field=@t
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
     depends_on:
-      - nats
-      - couchbase
-      - victorialogs
+      nats:
+        condition: service_started
+      couchbase:
+        condition: service_started
+      victorialogs:
+        condition: service_started
 
   basket-db:
     image: postgres:15-alpine
@@ -110,6 +125,11 @@ services:
     volumes:
       - basket_db_data:/var/lib/postgresql/data
       - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d BasketDb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
@@ -173,14 +193,14 @@ services:
     ports:
       - "6379:6379"
 
-  load-test:
-    image: grafana/k6:latest
-    profiles: [ "test" ]
-    volumes:
-      - ./tests/k6:/scripts
-    environment:
-      - BASE_URL=http://lothal.api.gateway:8080
-    command: run /scripts/load-test.js
+#  load-test:
+#    image: grafana/k6:latest
+#    profiles: [ "test" ]
+#    volumes:
+#      - ./tests/k6:/scripts
+#    environment:
+#      - BASE_URL=http://lothal.api.gateway:8080
+#    command: run /scripts/load-test.js
 
 volumes:
   basket_db_data:

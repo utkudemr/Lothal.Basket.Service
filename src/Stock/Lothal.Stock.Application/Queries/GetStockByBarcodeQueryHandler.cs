@@ -5,16 +5,10 @@ using Microsoft.Extensions.Logging;
 
 namespace Lothal.Stock.Application.Queries;
 
-public class GetStockByBarcodeQueryHandler : IRequestHandler<GetStockByBarcodeQuery, StockDocument?>
+public class GetStockByBarcodeQueryHandler(IStockRepository repository, ILogger<GetStockByBarcodeQueryHandler> logger) : IRequestHandler<GetStockByBarcodeQuery, StockDocument?>
 {
-    private readonly IStockRepository _repository;
-    private readonly ILogger<GetStockByBarcodeQueryHandler> _logger;
-
-    public GetStockByBarcodeQueryHandler(IStockRepository repository, ILogger<GetStockByBarcodeQueryHandler> logger)
-    {
-        _repository = repository;
-        _logger = logger;
-    }
+    private readonly IStockRepository _repository = repository;
+    private readonly ILogger<GetStockByBarcodeQueryHandler> _logger = logger;
 
     public async Task<StockDocument?> Handle(GetStockByBarcodeQuery request, CancellationToken cancellationToken)
     {

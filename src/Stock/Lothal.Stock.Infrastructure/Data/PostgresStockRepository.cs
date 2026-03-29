@@ -1,4 +1,5 @@
 using Dapper;
+using Lothal.Stock.Application.Commands;
 using Lothal.Stock.Application.Interfaces;
 using Lothal.Stock.Domain.Entities;
 using Microsoft.Extensions.Configuration;
@@ -83,19 +84,38 @@ public class PostgresStockRepository : IStockRepository
         return rowsAffected > 0;
     }
 
-    public async Task BulkIncreaseAllAsync(int amount, CancellationToken ct = default)
+    public async Task BulkIncreaseAsync(List<StockItemIncrease> items, CancellationToken ct = default)
     {
+        if (items == null || items.Count == 0) return;
+
         await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        await using var transaction = await conn.BeginTransactionAsync(ct);
 
-        const string sql = """
-            UPDATE stocks
-            SET warehouse_quantity = warehouse_quantity + @Amount,
-                last_updated_at    = NOW()
-            """;
+        try
+        {
+            const string sql = """
+                UPDATE stocks
+                SET warehouse_quantity = warehouse_quantity + @Amount,
+                    last_updated_at    = NOW()
+                WHERE barcode = @Barcode
+                """;
 
-        await conn.ExecuteAsync(
-            new CommandDefinition(sql, new { Amount = amount }, cancellationToken: ct));
+            // Dapper handles the list by executing for each item, but here we wrap it in a transaction for atomicity.
+            foreach (var item in items)
+            {
+                await conn.ExecuteAsync(
+                    new CommandDefinition(sql, new { Barcode = item.Barcode, Amount = item.Amount }, transaction: transaction, cancellationToken: ct));
+            }
 
-        _logger.LogInformation("PostgreSQL BulkIncreaseAll +{Amount} for all products", amount);
+            await transaction.CommitAsync(ct);
+            _logger.LogInformation("PostgreSQL BulkIncreaseAsync applied for {Count} items", items.Count);
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync(ct);
+            _logger.LogError(ex, "Failed to apply bulk stock increase");
+            throw;
+        }
     }
 }
