@@ -1,215 +1,109 @@
-# Lothal Basket Microservice Ecosystem
+# Lothal: Distributed Microservices Ecosystem
 
-This project demonstrates a comprehensive, fully functional **.NET 8** microservice architecture. It showcases advanced distributed system patterns including **Clean Architecture**, **CQRS (Lothal.Mediator)**, **Outbox/Inbox Patterns**, **Event-Driven Architecture (NATS)**, an **API Gateway (YARP)** with built-in dynamic load balancing and rate limiting, and **Distributed Tracing** via OpenTelemetry.
+[![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/download)
+[![Vue 3](https://img.shields.io/badge/Vue.js-3.0-4FC08D?logo=vuedotjs)](https://vuejs.org/)
+[![Docker](https://img.shields.io/badge/Docker-Orchestrated-2496ED?logo=docker)](https://www.docker.com/)
 
-Everything is containerized and orchestrated via **Docker Compose**, providing a seamless local development and deployment experience.
+**Lothal** is a high-performance, resilient microservices ecosystem built for scale and visibility. It demonstrates modern distributed system patterns like **CQRS**, **Event Sourced Ingestion**, **Outbox/Inbox Patterns**, and **Real-time Atomic Reservations**.
 
-## 🚀 Features
+---
 
-*   **Basket Service (Producer API)**: A .NET 8 Minimal API handling basket write operations (Create, Get) using **PostgreSQL** (Entity Framework Core).
-*   **Product Service (Data API)**: A .NET 8 Minimal API handling product transactions (Bulk merge, Get) using **Elasticsearch**.
-*   **Stock Service (Data API)**: A robust .NET 8 microservice managing inventory tracking and synchronization across PostgreSQL and Redis. Integrates directly into NATS for immediate propagation.
-*   **Admin Dashboard (UI)**: A rich, glassmorphic Vue 3 + Vite frontend for visualizing products, managing inventory, and orchestrating bulk warehouse operations.
-*   **Clean Architecture & CQRS**: Business logic is completely decoupled using layers (`Api`, `Application`, `Domain`, `Infrastructure`) and the custom `Lothal.Mediator` package.
-*   **Centralized Logging**: Seamlessly configured throughout all microservices using the shared `Lothal.BuildingBlocks` library, directing logs to **VictoriaLogs** via HTTP (Serilog + NDJSON batch formatter).
-*   **Distributed Tracing (OpenTelemetry)**: End-to-end distributed traces collected from all services (Basket API, Product API, Consumer, API Gateway) via the shared `Lothal.BuildingBlocks` library and exported to **Jaeger** using OTLP. Traces include ASP.NET Core, HTTP client, NATS, Couchbase, and Npgsql spans.
-*   **Outbox Pattern**: The Basket API reliably saves domain events to an Outbox table in PostgreSQL within the same transaction as the business entity changes. A background worker then publishes these events to NATS, guaranteeing at-least-once delivery.
-*   **NATS Messaging**: A lightweight, high-performance messaging system used as the event bus to decouple the producer and consumer.
-*   **Basket Consumer (Worker Service)**: A separate .NET 8 worker service that listens to events from NATS.
-*   **Inbox Pattern with Couchbase**: The Consumer uses **Couchbase** (NoSQL) to store incoming events (Inbox pattern) to guarantee idempotency and handles the read-model updates.
-*   **YARP API Gateway**: A dedicated entry point routing all external HTTP requests to the underlying basket services.
-*   **Docker DNS Load Balancing**: Dynamic Round-Robin load balancing across multiple microservice replicas using YARP and Docker's embedded DNS.
-*   **Rate Limiting**: Native ASP.NET Core rate limiting integrated into the YARP API Gateway to protect backend services.
+## 🏗 System Architecture
 
-## 📁 Project Structure
+Lothal is designed with a **Gateway-First** approach, ensuring all external traffic is routed through a single, protected entry point.
 
-```text
-Lothal.Basket.Service/
-├── docker-compose.yml          # Container orchestration (API, Consumer, Gateway, NATS, DBs, Observability)
-├── Dockerfile                  # Multi-stage Docker build for Basket Service (Producer)
-├── Dockerfile.ApiGateway       # Multi-stage Docker build for API Gateway (YARP)
-├── Dockerfile.Consumer         # Multi-stage Docker build for Basket Consumer
-├── Dockerfile.Stock            # Multi-stage Docker build for Stock Service
-├── src/
-│   ├── Api/                    # Producer Microservice (Basket API)
-│   │   ├── Lothal.Basket.Api/             # Minimal API Endpoints & Outbox Publisher Background Job
-│   │   ├── Lothal.Basket.Application/     # CQRS Handlers, Queries, Commands
-│   │   ├── Lothal.Basket.Domain/          # Entities (Basket, BasketItem, OutboxMessage)
-│   │   └── Lothal.Basket.Infrastructure/  # EF Core AppDbContext, Repositories
-│   ├── ApiGateway/             # YARP API Gateway Project
-│   ├── BuildingBlocks/         # Shared Libraries (Logging & Telemetry Configs)
-│   │   └── Lothal.BuildingBlocks/
-│   │       ├── Logging/        # AddCustomLogging() — Serilog → VictoriaLogs
-│   │       └── Telemetry/      # AddCustomTelemetry() — OpenTelemetry → Jaeger (OTLP)
-│   └── Consumer/               # Consumer Microservice
-│       └── Lothal.Basket.Consumer/        # NATS Listener & Couchbase Inbox Integration
-│   └── Product/                # Product Microservice (Product API)
-│       ├── Lothal.Product.Api/             # Minimal API Endpoints
-│       ├── Lothal.Product.Application/     # CQRS Handlers, Queries, Commands
-│       ├── Lothal.Product.Domain/          # Entities
-│       └── Lothal.Product.Infrastructure/  # Elasticsearch Integration
-│   └── Stock/                  # Stock Microservice (Stock API)
-│       ├── Lothal.Stock.Api/               # Endpoints for Inventory / Reservations
-│       ├── Lothal.Stock.Application/       # Event handlers and Commands
-│       ├── Lothal.Stock.Domain/            # Stock Entities
-│       └── Lothal.Stock.Infrastructure/    # PostgreSQL & Redis Stock Repositories
-│   └── UI/                     # Frontend Applications
-│       └── lothal-admin-ui/                # Vue 3 + Vite Admin Dashboard
+```mermaid
+graph TD
+    Client[Admin UI / Client] -->|HTTP| Gateway[YARP API Gateway: 5024]
+    
+    subgraph Core Services
+        Gateway -->|Route: /basket-api/*| Basket[Basket API: 8080]
+        Gateway -->|Route: /product-api/*| Product[Product API: 8080]
+        Gateway -->|Route: /api/stocks/*| Stock[Stock API: 8080]
+    end
+
+    subgraph Messaging & Persistence
+        Basket -->|Outbox| PG[(PostgreSQL)]
+        PG -.->|Background| NATS[NATS Event Bus]
+        NATS -->|stock.upsert| Stock
+        NATS -->|checkout| Consumer[Basket Consumer]
+        Consumer -->|Inbox| CB[(Couchbase NoSQL)]
+        Stock -->|Fast Reservations| Redis[(Redis)]
+        Product -->|Search| ES[(Elasticsearch)]
+    end
+
+    subgraph Observability
+        Gateway & Basket & Product & Stock -.->|OpenTelemetry| Jaeger[Jaeger]
+        Gateway & Basket & Product & Stock -.->|Serilog| Victoria[VictoriaLogs]
+        Victoria -.->|Dashboard| Grafana[Grafana]
+    end
 ```
 
-## 🐳 Running the Project (Docker Compose)
+---
 
-The easiest way to run the entire architecture (Gateway + Multiple Basket Replicas + Product API + Stock API + Consumer + NATS + PostgreSQL + Couchbase + Elasticsearch + VictoriaLogs + Grafana + Jaeger) is via Docker Compose.
+## 🛠 Technology Dashboard
 
-1.  Open your terminal in the root directory (where `docker-compose.yml` is located).
-2.  Build and start the containers in detached mode:
+| Category | Technology | Purpose |
+| :--- | :--- | :--- |
+| **Framework** | **.NET 8** | High-performance Minimal APIs & Background Workers. |
+| **Messaging** | **NATS** | Lightweight, ultra-fast async event bus. |
+| **Relational DB** | **PostgreSQL** | Source of truth for baskets, stock levels, and outbox logs. |
+| **NoSQL / Inbox** | **Couchbase** | Scalable storage for consumer events & idempotency. |
+| **Cache / Atomic** | **Redis** | Atomic stock reservations using Lua scripts. |
+| **Search Engine** | **Elasticsearch** | Fast, full-text product catalog search. |
+| **Gateway** | **YARP** | Dynamic routing, load balancing, and rate limiting. |
+| **Frontend** | **Vue 3 + Pinia** | Modern, reactive dashboard for inventory management. |
+| **Observability** | **Grafana + Jaeger** | Centralized logs (Victoria) and distributed traces. |
 
-    ```bash
-    docker compose up -d --build
-    ```
+---
 
-> **Note:** The `docker-compose.yml` is configured to spin up **2 replicas** (`deploy: replicas: 2`) of the Basket API and Stock API automatically to demonstrate load balancing behind the API Gateway.
+## 🚀 Key Features
 
-### 🖥️ Running the Admin UI
+- **🌐 Resilient Gateway**: YARP-powered gateway with fixed-window **Rate Limiting** and automated **Load Balancing** across multiple API replicas.
+- **⚡ Atomic Reservations**: Real-time stock reservation using **Redis Lua Scripts**, preventing race conditions even under extreme shopping loads.
+- **🛡️ Data Integrity**: Implementation of the **Outbox Pattern** in the Basket API ensures that domain events are never lost, even if the messaging system is down.
+- **🔁 Event-Driven Metadata**: Automatic synchronization between the Core Product feed and the Stock service via **NATS.Net**.
+- **🔭 Deep Visibility**: End-to-end distributed tracing using **OpenTelemetry**. Every request is traceable from the Gateway down to the specific SQL/NoSQL command.
+- **📦 Clean Architecture**: Strict separation of concerns using `Domain`, `Application`, `Infrastructure`, and `Api` layers.
 
-You can manage products and stocks using the included Vue dashboard natively on your host machine:
-1. `cd src/UI/lothal-admin-ui`
-2. `npm install`
-3. `npm run dev`
-4. Open your browser to `http://localhost:5173/`
+---
 
-## 🌐 API Endpoints & Testing
+## 🔭 Monitoring & Observability
 
-Once the containers are running, all requests should be routed through the **API Gateway** running on port `5024`.
+Lothal comes pre-configured with a full observability stack. All logs are shipped as structured JSON.
 
-### 1. Create a Basket (POST)
-Creates a new basket for a customer using the CQRS Command pattern. This operation saves the basket and an `OutboxMessage` to PostgreSQL. The background job then publishes the event to NATS, which is finally consumed by the Consumer and saved into Couchbase.
-*   **URL:** `http://localhost:5024/basket-api/api/baskets`
-*   **Method:** `POST`
-*   **Body:**
-    ```json
-    {
-      "customerId": "user-123"
-    }
-    ```
+| Tool | Access URL | Description |
+| :--- | :--- | :--- |
+| **Grafana** | [http://localhost:3000](http://localhost:3000) | Metrics & Logs visualization (Admin / admin). |
+| **Jaeger** | [http://localhost:16686](http://localhost:16686) | Distributed traces analyzer. |
+| **VictoriaLogs** | [http://localhost:9428](http://localhost:9428) | High-performance log query UI. |
+| **NATS Monitor** | [http://localhost:8222](http://localhost:8222) | Messaging server internal dashboard. |
 
-### 2. Get a Basket (GET)
-Retrieves a basket. This endpoint is extremely useful for demonstrating the **Round-Robin Load Balancing**.
-*   **URL:** `http://localhost:5024/basket-api/api/baskets/{id}`
-*   **Method:** `GET`
+---
 
-*(Replace `{id}` with the Guid returned from the POST request).*
+## 📥 Getting Started
 
-### ⚖️ Testing Load Balancing
+### Prerequisites
+- [Docker & Docker Compose](https://www.docker.com/products/docker-desktop)
+- [.NET 8 SDK](https://dotnet.microsoft.com/download) (for local builds)
+- [Node.js](https://nodejs.org/) (for Admin UI)
 
-When you execute multiple `GET` or `POST` requests rapidly, inspect the response headers or logs. YARP smoothly distributes your requests across the available replicas (`basket-api-1` and `basket-api-2`), proving that the Docker network load balancing is actively working!
-
-### 3. Products App Endpoints
-
-All product requests are routed via `/product-api/*`.
-
-*   **Get Product:** `GET http://localhost:5024/product-api/api/products/{barcode}`
-*   **Bulk Merge Products:** `POST http://localhost:5024/product-api/api/products/bulk-merge`
-    ```json
-    {
-      "products": [
-        { "barcode": "P2001", "price": 15.00, "name": "Hat", "class": "Accessories", "color": "Black", "size": "L" }
-      ]
-    }
-    ```
-
-### 4. Stock App Endpoints
-
-All stock adjustments and queries are routed via `/api/stocks/*`.
-
-*   **Get Stock:** `GET http://localhost:5024/api/stocks/{barcode}`
-*   **Bulk Increase All:** `POST http://localhost:5024/api/stocks/bulk-increase`
-    ```json
-    {
-      "amount": 1000,
-      "transactionId": "b47...uuid"
-    }
-    ```
-
-## 🛡️ Rate Limiting (YARP)
-
-To protect backend services from being overwhelmed, the YARP API Gateway implements ASP.NET Core Native Rate Limiting using the **Fixed Window** algorithm. Depending on the endpoint, different policies apply:
-
-*   **`create-basket-policy`**: Applied only to `POST /basket-api/api/baskets`. Highly restrictive (**5 requests / 10s**) to prevent spamming the database with write operations.
-*   **`get-basket-policy`**: Applied to all other endpoints (like `GET /basket-api/api/baskets/{id}`). More relaxed (**20 requests / 10s**) as these are lightweight read operations.
-
-If a limit is exceeded, the API Gateway immediately returns a **429 Too Many Requests** HTTP status code.
-
-## 🔭 Distributed Tracing (Jaeger)
-
-All services instrument outgoing and incoming requests using **OpenTelemetry** and export traces to **Jaeger** via the `OTEL_EXPORTER_OTLP_ENDPOINT` environment variable (`http://jaeger:4317` inside Docker).
-
-The shared `AddCustomTelemetry(applicationName)` extension from `Lothal.BuildingBlocks` configures:
-- **ASP.NET Core** instrumentation (incoming HTTP requests)
-- **HTTP Client** instrumentation (outgoing HTTP requests)
-- **NATS.Net**, **Couchbase**, **Npgsql**, and **YARP** activity sources
-
-Once the containers are running, open the **Jaeger UI** to explore traces:
-
-*   **URL:** `http://localhost:16686`
-
-## 📊 Centralized Logging (VictoriaLogs + Grafana)
-
-Logs from all services are shipped via HTTP using **Serilog** (NDJSON format) to **VictoriaLogs**.
-
-| Service | URL |
-|---|---|
-| VictoriaLogs (query UI) | `http://localhost:9428` |
-| Grafana | `http://localhost:3000` (admin / admin) |
-| Jaeger | `http://localhost:16686` |
-
-## 🚀 Performance Testing (k6)
-
-We use **k6** to validate the system under load. The test script simulates a full user journey: Create Basket → Add Items → Get Basket → Checkout.
-
-### Running via Docker Compose (Recommended)
-This runs k6 within the same Docker network as the services, ensuring perfect connectivity:
+### 1. Spin up the Infrastructure
+From the root directory:
 ```bash
-docker-compose --profile test up load-test
+docker-compose up -d --build
 ```
+*Note: This automatically scales the APIs and waits for database health before starting.*
 
-### Running Locally
-If you have k6 installed:
+### 2. Run the Admin Dashboard
 ```bash
-k6 run tests/k6/load-test.js
+cd src/UI/lothal-admin-ui
+npm install
+npm run dev
 ```
+Navigate to [http://localhost:5173/](http://localhost:5173/) to start managing your inventory.
 
-### Running via Docker Standalone
-```bash
-docker run --rm -i grafana/k6 run - <tests/k6/load-test.js
-```
+---
 
-### Thresholds
-- **Success Rate**: > 99%
-- **Latency (p95)**: < 500ms
-
-## 🛠 Stopping the Project
-
-To stop and clean up all containers and networks:
-
-```bash
-docker compose down
-```
-
-To entirely wipe volumes (PostgreSQL and Couchbase data):
-
-```bash
-docker compose down -v
-```
-
-## 📝 Technologies Used
-*   **C# 12 / .NET 8**
-*   **Lothal.Mediator** (Custom CQRS Dispatcher)
-*   **NATS** (Event Bus / Messaging)
-*   **Entity Framework Core & PostgreSQL** (Write Database & Outbox)
-*   **Couchbase** (Read Database / Inbox)
-*   **YARP** (Reverse Proxy & Rate Limiter)
-*   **Serilog & VictoriaLogs** (Centralized Logging)
-*   **OpenTelemetry & Jaeger** (Distributed Tracing)
-*   **Docker / Docker Compose**
-*   **Vue 3, Vite & Pinia** (Admin Dashboard)
+## 📝 License
+This project is open-source and intended for educational and demonstration purposes.
