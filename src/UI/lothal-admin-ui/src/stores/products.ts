@@ -41,15 +41,18 @@ export const useProductStore = defineStore('products', {
     },
 
     async fetchStocksForCurrentProducts() {
-      const stockPromises = this.products.map(async (p: ProductWithStock) => {
-        try {
-          const res = await stockApi.getByBarcode(p.barcode);
-          p.stock = res.data;
-        } catch (e) {
-          console.warn(`Could not fetch stock for ${p.barcode}`, e);
-        }
-      });
-      await Promise.allSettled(stockPromises);
+      const barcodes = this.products.map((p: ProductWithStock) => p.barcode);
+      if (barcodes.length === 0) return;
+
+      try {
+        const res = await stockApi.getBatch(barcodes);
+        const stockMap = new Map(res.data.map(s => [s.barcode, s]));
+        this.products.forEach((p: ProductWithStock) => {
+          p.stock = stockMap.get(p.barcode);
+        });
+      } catch (e) {
+        console.warn('Could not fetch batch stocks', e);
+      }
     },
 
     async upsertProduct(product: Product) {

@@ -30,6 +30,10 @@ export const productApi = {
 export const stockApi = {
   getByBarcode: (barcode: string) => 
     gatewayClient.get<Stock>(`/api/stocks/${barcode}`),
+
+  /** Fetch multiple stocks in a single round-trip — eliminates N+1 on pagination */
+  getBatch: (barcodes: string[]) =>
+    gatewayClient.post<Stock[]>('/api/stocks/batch', { barcodes }),
   
   upsert: (barcode: string, quantity: number, source: string = 'MANUAL') => 
     gatewayClient.put('/api/stocks/upsert', { barcode, warehouseQuantity: quantity, source }),

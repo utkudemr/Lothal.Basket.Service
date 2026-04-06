@@ -41,6 +41,33 @@ public class PostgresStockRepository : IStockRepository
         return result;
     }
 
+    public async Task<IReadOnlyList<StockDocument>> GetByBarcodesAsync(
+        IReadOnlyList<string> barcodes,
+        CancellationToken ct = default)
+    {
+        if (barcodes is null || barcodes.Count == 0)
+            return [];
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+
+        const string sql = """
+            SELECT 
+                barcode            AS Barcode,
+                warehouse_quantity AS WarehouseQuantity,
+                source             AS Source,
+                last_updated_at    AS LastUpdatedAt
+            FROM stocks
+            WHERE barcode = ANY(@Barcodes)
+            """;
+
+        var results = await conn.QueryAsync<StockDocument>(
+            new CommandDefinition(sql, new { Barcodes = barcodes.ToArray() }, cancellationToken: ct));
+
+        var list = results.AsList();
+        _logger.LogDebug("PostgreSQL GetByBarcodes — Requested={Requested} Found={Found}", barcodes.Count, list.Count);
+        return list;
+    }
+
     public async Task UpsertAsync(StockDocument document, CancellationToken ct = default)
     {
         await using var conn = new NpgsqlConnection(_connectionString);

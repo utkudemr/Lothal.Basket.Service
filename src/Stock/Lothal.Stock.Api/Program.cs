@@ -89,4 +89,18 @@ app.MapPost("/api/stocks/bulk-increase", async (
 .WithName("BulkIncreaseStock")
 .WithOpenApi();
 
+// ── POST /api/stocks/batch  (fetch multiple stocks in one round-trip) ─────────
+app.MapPost("/api/stocks/batch", async (
+    [FromBody] BatchStockRequest request,
+    [FromServices] IMediator mediator) =>
+{
+    if (request.Barcodes is null || request.Barcodes.Count == 0)
+        return Results.BadRequest(new { reason = "Barcodes list must not be empty" });
+
+    var stocks = await mediator.Send(new GetStocksByBarcodesQuery(request.Barcodes));
+    return Results.Ok(stocks);
+})
+.WithName("GetStocksBatch")
+.WithOpenApi();
+
 app.Run();
