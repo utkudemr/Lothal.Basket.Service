@@ -29,7 +29,8 @@ graph TD
         NATS -->|checkout| Consumer[Basket Consumer]
         Consumer -->|Inbox| CB[(Couchbase NoSQL)]
         Stock -->|Fast Reservations| Redis[(Redis)]
-        Product -->|Search| ES[(Elasticsearch)]
+        Product -->|Autocomplete| Redis
+        Product -->|Full-Text / Sync| ES[(Elasticsearch)]
     end
 
     subgraph Observability
@@ -49,8 +50,8 @@ graph TD
 | **Messaging** | **NATS** | Lightweight, ultra-fast async event bus. |
 | **Relational DB** | **PostgreSQL** | Source of truth for baskets, stock levels, and outbox logs. |
 | **NoSQL / Inbox** | **Couchbase** | Scalable storage for consumer events & idempotency. |
-| **Cache / Atomic** | **Redis** | Atomic stock reservations using Lua scripts. |
-| **Search Engine** | **Elasticsearch** | Fast, full-text product catalog search. |
+| **Cache / Autocomplete** | **Redis** | Atomic stock reservations & ultra-fast ZRANGEBYLEX autocomplete. |
+| **Search Engine** | **Elasticsearch** | Main product catalog storage and full-text search. |
 | **Gateway** | **YARP** | Dynamic routing, load balancing, and rate limiting. |
 | **Frontend** | **Vue 3 + Pinia** | Modern, reactive dashboard for inventory management. |
 | **Observability** | **Grafana + Jaeger** | Centralized logs (Victoria) and distributed traces. |
@@ -61,6 +62,7 @@ graph TD
 
 - **🌐 Resilient Gateway**: YARP-powered gateway with fixed-window **Rate Limiting** and automated **Load Balancing** across multiple API replicas.
 - **⚡ Atomic Reservations**: Real-time stock reservation using **Redis Lua Scripts**, preventing race conditions even under extreme shopping loads.
+- **🚀 Ultra-Fast Autocomplete**: In-memory prefix matching using **Redis Sorted Sets (ZRANGEBYLEX)** guarantees sub-millisecond search suggestions, offloading traffic from Elasticsearch.
 - **🛡️ Data Integrity**: Implementation of the **Outbox Pattern** in the Basket API ensures that domain events are never lost, even if the messaging system is down.
 - **🔁 Event-Driven Metadata**: Automatic synchronization between the Core Product feed and the Stock service via **NATS.Net**.
 - **🔭 Deep Visibility**: End-to-end distributed tracing using **OpenTelemetry**. Every request is traceable from the Gateway down to the specific SQL/NoSQL command.
