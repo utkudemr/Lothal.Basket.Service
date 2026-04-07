@@ -10,4 +10,5 @@ public interface IProductRepository
     Task BulkMergeAsync(IEnumerable<ProductEntity> products);
     Task<bool> DeleteAsync(string barcode);
     Task SeedDataAsync(IEnumerable<ProductEntity> products);
+    Task<IEnumerable<ProductEntity>> SearchByNameAsync(string query, int size = 10);
 }

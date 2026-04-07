@@ -10,6 +10,10 @@ export const useProductStore = defineStore('products', {
     pageSize: 10,
     loading: false,
     error: null as string | null,
+    // Search / autocomplete state
+    suggestions: [] as Product[],
+    searchQuery: '',
+    isSearching: false,
   }),
   actions: {
     async fetchProducts() {
@@ -111,6 +115,31 @@ export const useProductStore = defineStore('products', {
       } finally {
         this.loading = false;
       }
-    }
+    },
+
+    async searchProducts(q: string, signal?: AbortSignal) {
+      if (!q.trim()) {
+        this.suggestions = [];
+        this.searchQuery = '';
+        return;
+      }
+      this.searchQuery = q;
+      this.isSearching = true;
+      try {
+        const res = await productApi.search(q, 10, signal);
+        this.suggestions = res.data;
+      } catch (err: any) {
+        // AbortError = kullanıcı hızlı yazdı, yeni istek açıldı → ignore
+        if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') return;
+        console.warn('[store] search error', err.message);
+      } finally {
+        this.isSearching = false;
+      }
+    },
+
+    clearSearch() {
+      this.suggestions = [];
+      this.searchQuery = '';
+    },
   }
 });

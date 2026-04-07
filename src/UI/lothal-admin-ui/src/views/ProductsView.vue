@@ -5,6 +5,7 @@ import ProductTable from '../components/ProductTable.vue';
 import ProductModal from '../components/ProductModal.vue';
 import StockAdjustModal from '../components/StockAdjustModal.vue';
 import BulkConfirmModal from '../components/BulkConfirmModal.vue';
+import ProductSearchBar from '../components/ProductSearchBar.vue';
 import type { Product } from '../types/product';
 
 const store = useProductStore();
@@ -14,6 +15,7 @@ const showStockModal = ref(false);
 const showBulkModal = ref(false);
 const selectedProduct = ref<Product | null>(null);
 const selectedBarcodes = ref<string[]>([]);
+const highlightedBarcode = ref<string | null>(null);
 
 onMounted(() => {
   store.fetchProducts();
@@ -66,6 +68,15 @@ const handleSaveProduct = async (data: Product) => {
     // Error handled by store/toast
   }
 };
+
+const handleSearchSelect = (barcode: string) => {
+  // 1. sayfaya dön ve highlight'la
+  highlightedBarcode.value = barcode;
+  store.currentPage = 1;
+  store.fetchProducts();
+  // 3 saniye sonra highlight'ı kaldır
+  setTimeout(() => { highlightedBarcode.value = null; }, 3000);
+};
 </script>
 
 <template>
@@ -85,6 +96,12 @@ const handleSaveProduct = async (data: Product) => {
       </div>
     </header>
 
+    <ProductSearchBar
+      class="animate-fade-in"
+      style="animation-delay: 0.05s"
+      @select="handleSearchSelect"
+    />
+
     <div class="stats-overview animate-fade-in" style="animation-delay: 0.1s">
       <div class="glass-card stat">
         <label>Total Products</label>
@@ -98,6 +115,7 @@ const handleSaveProduct = async (data: Product) => {
 
     <ProductTable 
       v-model:selectedBarcodes="selectedBarcodes"
+      :highlightedBarcode="highlightedBarcode"
       @edit-product="openEdit" 
       @adjust-stock="openStockAdjust" 
       style="animation-delay: 0.2s"

@@ -6,6 +6,7 @@ const store = useProductStore();
 
 const props = defineProps<{
   selectedBarcodes: string[];
+  highlightedBarcode?: string | null;
 }>();
 
 const emit = defineEmits(['edit-product', 'adjust-stock', 'update:selectedBarcodes']);
@@ -65,7 +66,15 @@ const endItem = computed(() => Math.min(store.currentPage * store.pageSize, stor
         </tr>
       </thead>
       <tbody>
-        <tr v-for="product in store.products" :key="product.barcode" class="animate-fade-in" :class="{ 'row-selected': isSelected(product.barcode) }">
+        <tr
+          v-for="product in store.products"
+          :key="product.barcode"
+          class="animate-fade-in"
+          :class="{
+            'row-selected': isSelected(product.barcode),
+            'row-highlighted': product.barcode === props.highlightedBarcode
+          }"
+        >
           <td>
             <input 
               type="checkbox" 
@@ -185,5 +194,14 @@ const endItem = computed(() => Math.min(store.currentPage * store.pageSize, stor
 }
 .row-selected {
   background: rgba(124, 58, 237, 0.05);
+}
+.row-highlighted {
+  background: rgba(99, 102, 241, 0.18);
+  outline: 1.5px solid rgba(99, 102, 241, 0.5);
+  animation: row-glow 0.5s ease;
+}
+@keyframes row-glow {
+  0%   { background: rgba(99, 102, 241, 0.45); }
+  100% { background: rgba(99, 102, 241, 0.18); }
 }
 </style>

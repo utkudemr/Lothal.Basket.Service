@@ -10,10 +10,14 @@ namespace Lothal.Product.Application.Commands;
 public class BulkMergeProductsCommandHandler : IRequestHandler<BulkMergeProductsCommand, bool>
 {
     private readonly IProductRepository _repository;
+    private readonly IProductAutocompleteService _autocompleteService;
 
-    public BulkMergeProductsCommandHandler(IProductRepository repository)
+    public BulkMergeProductsCommandHandler(
+        IProductRepository repository, 
+        IProductAutocompleteService autocompleteService)
     {
         _repository = repository;
+        _autocompleteService = autocompleteService;
     }
 
     public async Task<bool> Handle(BulkMergeProductsCommand request, CancellationToken cancellationToken)
@@ -31,7 +35,9 @@ public class BulkMergeProductsCommandHandler : IRequestHandler<BulkMergeProducts
             Size = p.Size
         });
 
-        await _repository.BulkMergeAsync(entities);
+        var entityList = entities.ToList();
+        await _repository.BulkMergeAsync(entityList);
+        await _autocompleteService.IndexProductsAsync(entityList);
         return true;
     }
 }

@@ -115,5 +115,31 @@ public class ElasticSearchProductRepository : IProductRepository
             }
         }
     }
+
+    public async Task<IEnumerable<ProductEntity>> SearchByNameAsync(string query, int size = 10)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+            return Enumerable.Empty<ProductEntity>();
+
+        var response = await _client.SearchAsync<ProductEntity>(s => s
+            .Index(IndexName)
+            .Size(size)
+            .Query(q => q
+                .MatchPhrasePrefix(m => m
+                    .Field(f => f.Name)
+                    .Query(query)
+                    .MaxExpansions(50)
+                )
+            )
+        );
+
+        if (!response.IsValidResponse)
+        {
+            _logger.LogError("Error searching products by name '{Query}': {Error}", query, response.DebugInformation);
+            return Enumerable.Empty<ProductEntity>();
+        }
+
+        return response.Documents;
+    }
 }
 

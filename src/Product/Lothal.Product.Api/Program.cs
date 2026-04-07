@@ -64,4 +64,15 @@ app.MapDelete("/api/products/{barcode}", async (string barcode, [FromServices] I
 .WithName("DeleteProduct")
 .WithOpenApi();
 
+app.MapGet("/api/products/search", async ([FromQuery] string? q, [FromQuery] int? size, [FromServices] IMediator mediator) =>
+{
+    if (string.IsNullOrWhiteSpace(q))
+        return Results.BadRequest(new { reason = "Query parameter 'q' is required." });
+
+    var results = await mediator.Send(new SearchProductsQuery(q, size ?? 10));
+    return Results.Ok(results);
+})
+.WithName("SearchProducts")
+.WithOpenApi();
+
 app.Run();

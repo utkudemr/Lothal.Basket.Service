@@ -25,6 +25,9 @@ export const productApi = {
   
   delete: (barcode: string) => 
     gatewayClient.delete(`/api/gateway/products/${barcode}`),
+
+  search: (q: string, size = 10, signal?: AbortSignal) =>
+    gatewayClient.get<Product[]>(`/api/gateway/products/search?q=${encodeURIComponent(q)}&size=${size}`, { signal }),
 };
 
 export const stockApi = {
