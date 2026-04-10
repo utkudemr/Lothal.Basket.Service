@@ -8,14 +8,29 @@ const emit = defineEmits<{
 
 const store = useProductStore();
 const inputRef = ref<HTMLInputElement | null>(null);
+const containerRef = ref<HTMLElement | null>(null);
 const isOpen = ref(false);
 const activeIndex = ref(-1);
+
+// Dropdown'ın ekranda nereye konumlanacağını tutar (fixed positioning için)
+const dropdownStyle = ref({ top: '0px', left: '0px', width: '0px' });
 
 // Debounce + AbortController
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 let abortController: AbortController | null = null;
 
 const DEBOUNCE_MS = 300;
+
+/** Search container'ının konumunu hesaplar ve dropdown style'ını günceller */
+function updateDropdownPosition() {
+  if (!containerRef.value) return;
+  const rect = containerRef.value.getBoundingClientRect();
+  dropdownStyle.value = {
+    top: `${rect.bottom + 8}px`,
+    left: `${rect.left}px`,
+    width: `${rect.width}px`,
+  };
+}
 
 function onInput(event: Event) {
   const q = (event.target as HTMLInputElement).value;
@@ -34,6 +49,7 @@ function onInput(event: Event) {
     abortController = new AbortController();
     await store.searchProducts(q, abortController.signal);
     isOpen.value = store.suggestions.length > 0 || q.trim().length > 0;
+    if (isOpen.value) updateDropdownPosition();
   }, DEBOUNCE_MS);
 }
 
@@ -62,6 +78,13 @@ function onKeydown(e: KeyboardEvent) {
   }
 }
 
+function onFocus() {
+  if (store.suggestions.length > 0) {
+    isOpen.value = true;
+    updateDropdownPosition();
+  }
+}
+
 function onBlur() {
   // Küçük gecikme ile kapat — tıklama olayının önüne geçme
   setTimeout(() => { isOpen.value = false; }, 150);
@@ -75,7 +98,7 @@ onUnmounted(() => {
 
 <template>
   <div class="search-wrapper">
-    <div class="search-container" :class="{ 'search-active': isOpen }">
+    <div ref="containerRef" class="search-container" :class="{ 'search-active': isOpen }">
       <div class="search-icon">
         <svg v-if="!store.isSearching" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
           fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -94,44 +117,52 @@ onUnmounted(() => {
         @input="onInput"
         @keydown="onKeydown"
         @blur="onBlur"
-        @focus="isOpen = store.suggestions.length > 0"
+        @focus="onFocus"
       />
 
       <kbd class="search-shortcut" aria-hidden="true">ESC</kbd>
     </div>
 
-    <!-- Dropdown -->
-    <Transition name="dropdown">
-      <div v-if="isOpen" class="suggestions-dropdown" role="listbox" aria-label="Ürün önerileri">
-        <!-- Sonuç var -->
-        <template v-if="store.suggestions.length > 0">
-          <button
-            v-for="(product, idx) in store.suggestions"
-            :key="product.barcode"
-            class="suggestion-item"
-            :class="{ 'suggestion-active': idx === activeIndex }"
-            role="option"
-            :aria-selected="idx === activeIndex"
-            @mousedown.prevent="selectSuggestion(product.barcode)"
-          >
-            <div class="suggestion-name">{{ product.name }}</div>
-            <div class="suggestion-meta">
-              <span class="suggestion-barcode">{{ product.barcode }}</span>
-              <span class="suggestion-price">₺{{ product.price.toFixed(2) }}</span>
-            </div>
-          </button>
-        </template>
+    <!-- Dropdown: <body>'ye teleport edildi — her türlü overflow/z-index context'ini aşar -->
+    <Teleport to="body">
+      <Transition name="dropdown">
+        <div
+          v-if="isOpen"
+          class="suggestions-dropdown"
+          role="listbox"
+          aria-label="Ürün önerileri"
+          :style="dropdownStyle"
+        >
+          <!-- Sonuç var -->
+          <template v-if="store.suggestions.length > 0">
+            <button
+              v-for="(product, idx) in store.suggestions"
+              :key="product.barcode"
+              class="suggestion-item"
+              :class="{ 'suggestion-active': idx === activeIndex }"
+              role="option"
+              :aria-selected="idx === activeIndex"
+              @mousedown.prevent="selectSuggestion(product.barcode)"
+            >
+              <div class="suggestion-name">{{ product.name }}</div>
+              <div class="suggestion-meta">
+                <span class="suggestion-barcode">{{ product.barcode }}</span>
+                <span class="suggestion-price">₺{{ product.price.toFixed(2) }}</span>
+              </div>
+            </button>
+          </template>
 
-        <!-- Sonuç yok -->
-        <div v-else-if="!store.isSearching && store.searchQuery" class="suggestion-empty">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
-            fill="none" stroke="currentColor" stroke-width="1.5">
-            <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /><path d="M8 11h6" />
-          </svg>
-          <span>"<strong>{{ store.searchQuery }}</strong>" için ürün bulunamadı.</span>
+          <!-- Sonuç yok -->
+          <div v-else-if="!store.isSearching && store.searchQuery" class="suggestion-empty">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /><path d="M8 11h6" />
+            </svg>
+            <span>"<strong>{{ store.searchQuery }}</strong>" için ürün bulunamadı.</span>
+          </div>
         </div>
-      </div>
-    </Transition>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -194,18 +225,15 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-/* Dropdown */
+/* Dropdown — body'ye teleport edildiği için fixed positioning kullanılır */
 .suggestions-dropdown {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  right: 0;
+  position: fixed;
   background: var(--surface-dropdown, #1e1e2e);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
   overflow: hidden;
-  z-index: 999;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+  z-index: 99999;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
   backdrop-filter: blur(16px);
 }
 
